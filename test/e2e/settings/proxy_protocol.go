@@ -28,7 +28,7 @@ import (
 	"k8s.io/ingress-nginx/test/e2e/framework"
 )
 
-var _ = framework.IngressNginxDescribe("Proxy Protocol", func() {
+var _ = framework.DescribeSetting("use-proxy-protocol", func() {
 	f := framework.NewDefaultFramework("proxy-protocol")
 
 	setting := "use-proxy-protocol"
@@ -36,9 +36,6 @@ var _ = framework.IngressNginxDescribe("Proxy Protocol", func() {
 	BeforeEach(func() {
 		f.NewEchoDeployment()
 		f.UpdateNginxConfigMapData(setting, "false")
-	})
-
-	AfterEach(func() {
 	})
 
 	It("should respect port passed by the PROXY Protocol", func() {
@@ -68,7 +65,40 @@ var _ = framework.IngressNginxDescribe("Proxy Protocol", func() {
 		Expect(err).NotTo(HaveOccurred(), "unexpected error reading connection data")
 		body := string(data)
 		Expect(body).Should(ContainSubstring(fmt.Sprintf("host=%v", "proxy-protocol")))
-		Expect(body).Should(ContainSubstring(fmt.Sprintf("x-forwarded-port=80")))
+		Expect(body).Should(ContainSubstring(fmt.Sprintf("x-forwarded-port=1234")))
+		Expect(body).Should(ContainSubstring(fmt.Sprintf("x-forwarded-proto=http")))
+		Expect(body).Should(ContainSubstring(fmt.Sprintf("x-forwarded-for=192.168.0.1")))
+	})
+
+	It("should respect proto passed by the PROXY Protocol server port", func() {
+		host := "proxy-protocol"
+
+		f.UpdateNginxConfigMapData(setting, "true")
+
+		f.EnsureIngress(framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, nil))
+
+		f.WaitForNginxServer(host,
+			func(server string) bool {
+				return strings.Contains(server, "server_name proxy-protocol") &&
+					strings.Contains(server, "listen 80 proxy_protocol")
+			})
+
+		ip := f.GetNginxIP()
+
+		conn, err := net.Dial("tcp", net.JoinHostPort(ip, "80"))
+		Expect(err).NotTo(HaveOccurred(), "unexpected error creating connection to %s:80", ip)
+		defer conn.Close()
+
+		header := "PROXY TCP4 192.168.0.1 192.168.0.11 56324 443\r\n"
+		conn.Write([]byte(header))
+		conn.Write([]byte("GET / HTTP/1.1\r\nHost: proxy-protocol\r\n\r\n"))
+
+		data, err := ioutil.ReadAll(conn)
+		Expect(err).NotTo(HaveOccurred(), "unexpected error reading connection data")
+		body := string(data)
+		Expect(body).Should(ContainSubstring(fmt.Sprintf("host=%v", "proxy-protocol")))
+		Expect(body).Should(ContainSubstring(fmt.Sprintf("x-forwarded-port=443")))
+		Expect(body).Should(ContainSubstring(fmt.Sprintf("x-forwarded-proto=https")))
 		Expect(body).Should(ContainSubstring(fmt.Sprintf("x-forwarded-for=192.168.0.1")))
 	})
 })

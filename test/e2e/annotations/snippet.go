@@ -22,14 +22,11 @@ import (
 	"k8s.io/ingress-nginx/test/e2e/framework"
 )
 
-var _ = framework.IngressNginxDescribe("Annotations - Configurationsnippet", func() {
+var _ = framework.DescribeAnnotation("configuration-snippet", func() {
 	f := framework.NewDefaultFramework("configurationsnippet")
 
 	BeforeEach(func() {
 		f.NewEchoDeploymentWithReplicas(2)
-	})
-
-	AfterEach(func() {
 	})
 
 	It(`set snippet "more_set_headers "Request-Id: $req_id";" in all locations"`, func() {
@@ -39,7 +36,7 @@ var _ = framework.IngressNginxDescribe("Annotations - Configurationsnippet", fun
 				more_set_headers "Request-Id: $req_id";`,
 		}
 
-		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, &annotations)
+		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, annotations)
 		f.EnsureIngress(ing)
 
 		f.WaitForNginxServer(host,

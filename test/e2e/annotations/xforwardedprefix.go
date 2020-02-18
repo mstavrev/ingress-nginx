@@ -25,14 +25,11 @@ import (
 	"k8s.io/ingress-nginx/test/e2e/framework"
 )
 
-var _ = framework.IngressNginxDescribe("Annotations - X-Forwarded-Prefix", func() {
+var _ = framework.DescribeAnnotation("x-forwarded-prefix", func() {
 	f := framework.NewDefaultFramework("xforwardedprefix")
 
 	BeforeEach(func() {
 		f.NewEchoDeployment()
-	})
-
-	AfterEach(func() {
 	})
 
 	It("should set the X-Forwarded-Prefix to the annotation value", func() {
@@ -42,7 +39,7 @@ var _ = framework.IngressNginxDescribe("Annotations - X-Forwarded-Prefix", func(
 			"nginx.ingress.kubernetes.io/rewrite-target":     "/foo",
 		}
 
-		f.EnsureIngress(framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, &annotations))
+		f.EnsureIngress(framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, annotations))
 		f.WaitForNginxServer(host,
 			func(server string) bool {
 				return Expect(server).Should(ContainSubstring("proxy_set_header X-Forwarded-Prefix \"/test/value\";"))
@@ -66,7 +63,7 @@ var _ = framework.IngressNginxDescribe("Annotations - X-Forwarded-Prefix", func(
 			"nginx.ingress.kubernetes.io/rewrite-target":     "/foo",
 		}
 
-		f.EnsureIngress(framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, &annotations))
+		f.EnsureIngress(framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, annotations))
 		f.WaitForNginxServer(host,
 			func(server string) bool {
 				return Expect(server).Should(And(ContainSubstring(host), Not(ContainSubstring("proxy_set_header X-Forwarded-Prefix"))))

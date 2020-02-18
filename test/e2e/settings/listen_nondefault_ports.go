@@ -30,7 +30,7 @@ import (
 	"k8s.io/ingress-nginx/test/e2e/framework"
 )
 
-var _ = framework.IngressNginxDescribe("Listen on nondefault ports", func() {
+var _ = framework.IngressNginxDescribe("[Flag] custom HTTP and HTTPS ports", func() {
 
 	host := "forwarded-headers"
 
@@ -118,7 +118,7 @@ var _ = framework.IngressNginxDescribe("Listen on nondefault ports", func() {
 					"nginx.ingress.kubernetes.io/auth-signin": "http://$host/auth/start",
 				}
 
-				ing := framework.NewSingleIngressWithTLS(host, "/", host, []string{host}, f.Namespace, framework.EchoService, 80, &annotations)
+				ing := framework.NewSingleIngressWithTLS(host, "/", host, []string{host}, f.Namespace, framework.EchoService, 80, annotations)
 
 				f.EnsureIngress(ing)
 				tlsConfig, err := framework.CreateIngressTLSSecret(f.KubeClientSet,

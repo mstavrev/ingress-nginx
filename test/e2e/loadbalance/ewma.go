@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/parnurzeal/gorequest"
 
@@ -30,13 +29,15 @@ import (
 	"k8s.io/ingress-nginx/test/e2e/framework"
 )
 
-var _ = framework.IngressNginxDescribe("Load Balance - EWMA", func() {
+var _ = framework.DescribeSetting("[Load Balancer] EWMA", func() {
 	f := framework.NewDefaultFramework("ewma")
 
 	BeforeEach(func() {
 		f.NewEchoDeploymentWithReplicas(3)
-		f.UpdateNginxConfigMapData("worker-processes", "2")
-		f.UpdateNginxConfigMapData("load-balance", "ewma")
+		f.SetNginxConfigMapData(map[string]string{
+			"worker-processes": "2",
+			"load-balance":     "ewma"},
+		)
 	})
 
 	It("does not fail requests", func() {
@@ -47,7 +48,6 @@ var _ = framework.IngressNginxDescribe("Load Balance - EWMA", func() {
 			func(server string) bool {
 				return strings.Contains(server, "server_name load-balance.com")
 			})
-		time.Sleep(waitForLuaSync)
 
 		algorithm, err := f.GetLbAlgorithm(framework.EchoService, 80)
 		Expect(err).Should(BeNil())

@@ -23,14 +23,11 @@ import (
 	"k8s.io/ingress-nginx/test/e2e/framework"
 )
 
-var _ = framework.IngressNginxDescribe("Annotations - Log", func() {
+var _ = framework.DescribeAnnotation("enable-access-log enable-rewrite-log", func() {
 	f := framework.NewDefaultFramework("log")
 
 	BeforeEach(func() {
 		f.NewEchoDeploymentWithReplicas(2)
-	})
-
-	AfterEach(func() {
 	})
 
 	It("set access_log off", func() {
@@ -39,7 +36,7 @@ var _ = framework.IngressNginxDescribe("Annotations - Log", func() {
 			"nginx.ingress.kubernetes.io/enable-access-log": "false",
 		}
 
-		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, &annotations)
+		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, annotations)
 		f.EnsureIngress(ing)
 
 		f.WaitForNginxServer(host,
@@ -54,7 +51,7 @@ var _ = framework.IngressNginxDescribe("Annotations - Log", func() {
 			"nginx.ingress.kubernetes.io/enable-rewrite-log": "true",
 		}
 
-		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, &annotations)
+		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, annotations)
 		f.EnsureIngress(ing)
 
 		f.WaitForNginxServer(host,

@@ -49,9 +49,12 @@ const (
 
 // Configuration contains all the settings required by an Ingress controller
 type Configuration struct {
-	APIServerHost  string
+	APIServerHost string
+	RootCAFile    string
+
 	KubeConfigFile string
-	Client         clientset.Interface
+
+	Client clientset.Interface
 
 	ResyncPeriod time.Duration
 
@@ -589,6 +592,8 @@ func (n *NGINXController) getBackendServers(ingresses []*ingress.Ingress) ([]*in
 					ups.SessionAffinity.CookieSessionAffinity.Expires = anns.SessionAffinity.Cookie.Expires
 					ups.SessionAffinity.CookieSessionAffinity.MaxAge = anns.SessionAffinity.Cookie.MaxAge
 					ups.SessionAffinity.CookieSessionAffinity.Path = cookiePath
+					ups.SessionAffinity.CookieSessionAffinity.SameSite = anns.SessionAffinity.Cookie.SameSite
+					ups.SessionAffinity.CookieSessionAffinity.ConditionalSameSiteNone = anns.SessionAffinity.Cookie.ConditionalSameSiteNone
 					ups.SessionAffinity.CookieSessionAffinity.ChangeOnFailure = anns.SessionAffinity.Cookie.ChangeOnFailure
 
 					locs := ups.SessionAffinity.CookieSessionAffinity.Locations
@@ -1112,6 +1117,7 @@ func (n *NGINXController) createServers(data []*ingress.Ingress,
 			tlsSecretName := extractTLSSecretName(host, ing, n.store.GetLocalSSLCert)
 			if tlsSecretName == "" {
 				klog.V(3).Infof("Host %q is listed in the TLS section but secretName is empty. Using default certificate.", host)
+				servers[host].SSLCert = n.getDefaultSSLCertificate()
 				continue
 			}
 
@@ -1119,6 +1125,7 @@ func (n *NGINXController) createServers(data []*ingress.Ingress,
 			cert, err := n.store.GetLocalSSLCert(secrKey)
 			if err != nil {
 				klog.Warningf("Error getting SSL certificate %q: %v. Using default certificate", secrKey, err)
+				servers[host].SSLCert = n.getDefaultSSLCertificate()
 				continue
 			}
 
@@ -1133,6 +1140,7 @@ func (n *NGINXController) createServers(data []*ingress.Ingress,
 					klog.Warningf("SSL certificate %q does not contain a Common Name or Subject Alternative Name for server %q: %v",
 						secrKey, host, err)
 					klog.Warningf("Using default certificate")
+					servers[host].SSLCert = n.getDefaultSSLCertificate()
 					continue
 				}
 			}
@@ -1146,12 +1154,28 @@ func (n *NGINXController) createServers(data []*ingress.Ingress,
 	}
 
 	for host, hostAliases := range allAliases {
-		for index, alias := range hostAliases {
-			if _, ok := servers[alias]; ok {
-				klog.Warningf("Conflicting hostname (%v) and alias (%v). Removing alias to avoid conflicts.", host, alias)
-				servers[host].Aliases = append(servers[host].Aliases[:index], servers[host].Aliases[index+1:]...)
-			}
+		if _, ok := servers[host]; !ok {
+			continue
 		}
+
+		uniqAliases := sets.NewString()
+		for _, alias := range hostAliases {
+			if alias == host {
+				continue
+			}
+
+			if _, ok := servers[alias]; ok {
+				continue
+			}
+
+			if uniqAliases.Has(alias) {
+				continue
+			}
+
+			uniqAliases.Insert(alias)
+		}
+
+		servers[host].Aliases = uniqAliases.List()
 	}
 
 	return servers
@@ -1165,7 +1189,9 @@ func locationApplyAnnotations(loc *ingress.Location, anns *annotations.Ingress) 
 	loc.ExternalAuth = anns.ExternalAuth
 	loc.EnableGlobalAuth = anns.EnableGlobalAuth
 	loc.HTTP2PushPreload = anns.HTTP2PushPreload
+	loc.Opentracing = anns.Opentracing
 	loc.Proxy = anns.Proxy
+	loc.ProxySSL = anns.ProxySSL
 	loc.RateLimit = anns.RateLimit
 	loc.Redirect = anns.Redirect
 	loc.Rewrite = anns.Rewrite
@@ -1176,7 +1202,6 @@ func locationApplyAnnotations(loc *ingress.Location, anns *annotations.Ingress) 
 	loc.UsePortInRedirects = anns.UsePortInRedirects
 	loc.Connection = anns.Connection
 	loc.Logs = anns.Logs
-	loc.LuaRestyWAF = anns.LuaRestyWAF
 	loc.InfluxDB = anns.InfluxDB
 	loc.DefaultBackend = anns.DefaultBackend
 	loc.BackendProtocol = anns.BackendProtocol

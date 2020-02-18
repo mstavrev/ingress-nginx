@@ -28,14 +28,11 @@ import (
 	"k8s.io/ingress-nginx/test/e2e/framework"
 )
 
-var _ = framework.IngressNginxDescribe("Annotations - AuthTLS", func() {
+var _ = framework.DescribeAnnotation("auth-tls-*", func() {
 	f := framework.NewDefaultFramework("authtls")
 
 	BeforeEach(func() {
 		f.NewEchoDeploymentWithReplicas(2)
-	})
-
-	AfterEach(func() {
 	})
 
 	It("should set valid auth-tls-secret", func() {
@@ -53,7 +50,7 @@ var _ = framework.IngressNginxDescribe("Annotations - AuthTLS", func() {
 			"nginx.ingress.kubernetes.io/auth-tls-secret": nameSpace + "/" + host,
 		}
 
-		f.EnsureIngress(framework.NewSingleIngressWithTLS(host, "/", host, []string{host}, nameSpace, framework.EchoService, 80, &annotations))
+		f.EnsureIngress(framework.NewSingleIngressWithTLS(host, "/", host, []string{host}, nameSpace, framework.EchoService, 80, annotations))
 
 		assertSslClientCertificateConfig(f, host, "on", "1")
 
@@ -95,7 +92,7 @@ var _ = framework.IngressNginxDescribe("Annotations - AuthTLS", func() {
 			"nginx.ingress.kubernetes.io/auth-tls-verify-depth":  "2",
 		}
 
-		f.EnsureIngress(framework.NewSingleIngressWithTLS(host, "/", host, []string{host}, nameSpace, framework.EchoService, 80, &annotations))
+		f.EnsureIngress(framework.NewSingleIngressWithTLS(host, "/", host, []string{host}, nameSpace, framework.EchoService, 80, annotations))
 
 		assertSslClientCertificateConfig(f, host, "off", "2")
 
@@ -130,7 +127,7 @@ var _ = framework.IngressNginxDescribe("Annotations - AuthTLS", func() {
 			"nginx.ingress.kubernetes.io/auth-tls-pass-certificate-to-upstream": "true",
 		}
 
-		f.EnsureIngress(framework.NewSingleIngressWithTLS(host, "/", host, []string{host}, nameSpace, framework.EchoService, 80, &annotations))
+		f.EnsureIngress(framework.NewSingleIngressWithTLS(host, "/", host, []string{host}, nameSpace, framework.EchoService, 80, annotations))
 
 		assertSslClientCertificateConfig(f, host, "on", "1")
 

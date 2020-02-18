@@ -26,14 +26,8 @@ import (
 	"k8s.io/ingress-nginx/test/e2e/framework"
 )
 
-var _ = framework.IngressNginxDescribe("Default backend - SSL", func() {
+var _ = framework.IngressNginxDescribe("[Default Backend] SSL", func() {
 	f := framework.NewDefaultFramework("default-backend")
-
-	BeforeEach(func() {
-	})
-
-	AfterEach(func() {
-	})
 
 	It("should return a self generated SSL certificate", func() {
 		By("checking SSL Certificate using the NGINX IP address")
@@ -59,6 +53,7 @@ var _ = framework.IngressNginxDescribe("Default backend - SSL", func() {
 				InsecureSkipVerify: true,
 			}).
 			Set("Host", "foo.bar.com").End()
+
 		Expect(errs).Should(BeEmpty())
 		Expect(len(resp.TLS.PeerCertificates)).Should(BeNumerically("==", 1))
 		for _, pc := range resp.TLS.PeerCertificates {

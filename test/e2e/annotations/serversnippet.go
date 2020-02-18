@@ -24,14 +24,11 @@ import (
 	"k8s.io/ingress-nginx/test/e2e/framework"
 )
 
-var _ = framework.IngressNginxDescribe("Annotations - ServerSnippet", func() {
+var _ = framework.DescribeAnnotation("server-snippet", func() {
 	f := framework.NewDefaultFramework("serversnippet")
 
 	BeforeEach(func() {
 		f.NewEchoDeploymentWithReplicas(2)
-	})
-
-	AfterEach(func() {
 	})
 
 	It(`add valid directives to server via server snippet"`, func() {
@@ -42,7 +39,7 @@ var _ = framework.IngressNginxDescribe("Annotations - ServerSnippet", func() {
 				more_set_headers "Content-Type: $content_type";`,
 		}
 
-		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, &annotations)
+		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, annotations)
 		f.EnsureIngress(ing)
 
 		f.WaitForNginxServer(host,

@@ -18,7 +18,6 @@ package loadbalance
 
 import (
 	"strings"
-	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -26,18 +25,11 @@ import (
 	"k8s.io/ingress-nginx/test/e2e/framework"
 )
 
-const (
-	waitForLuaSync = 5 * time.Second
-)
-
-var _ = framework.IngressNginxDescribe("Load Balance - Configmap value", func() {
+var _ = framework.DescribeSetting("[Load Balancer] load-balance", func() {
 	f := framework.NewDefaultFramework("lb-configmap")
 
 	BeforeEach(func() {
 		f.NewEchoDeploymentWithReplicas(1)
-	})
-
-	AfterEach(func() {
 	})
 
 	It("should apply the configmap load-balance setting", func() {
@@ -50,7 +42,6 @@ var _ = framework.IngressNginxDescribe("Load Balance - Configmap value", func() 
 			func(server string) bool {
 				return strings.Contains(server, "server_name load-balance.com")
 			})
-		time.Sleep(waitForLuaSync)
 
 		algorithm, err := f.GetLbAlgorithm(framework.EchoService, 80)
 		Expect(err).Should(BeNil())

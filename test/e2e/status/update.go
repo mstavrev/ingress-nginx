@@ -34,16 +34,10 @@ import (
 	"k8s.io/ingress-nginx/test/e2e/framework"
 )
 
-var _ = framework.IngressNginxDescribe("Status Update [Status]", func() {
+var _ = framework.IngressNginxDescribe("[Status] status update", func() {
 	f := framework.NewDefaultFramework("status-update")
 	host := "status-update"
 	address := getHostIP()
-
-	BeforeEach(func() {
-	})
-
-	AfterEach(func() {
-	})
 
 	It("should update status field after client-go reconnection", func() {
 		port, cmd, err := f.KubectlProxy(0)
@@ -51,20 +45,23 @@ var _ = framework.IngressNginxDescribe("Status Update [Status]", func() {
 
 		err = framework.UpdateDeployment(f.KubeClientSet, f.Namespace, "nginx-ingress-controller", 1,
 			func(deployment *appsv1.Deployment) error {
-				args := deployment.Spec.Template.Spec.Containers[0].Args
+				args := []string{}
+				// flags --publish-service and --publish-status-address are mutually exclusive
+
+				for _, v := range deployment.Spec.Template.Spec.Containers[0].Args {
+					if strings.Contains(v, "--publish-service") {
+						continue
+					}
+
+					if strings.Contains(v, "--update-status") {
+						continue
+					}
+
+					args = append(args, v)
+				}
+
 				args = append(args, fmt.Sprintf("--apiserver-host=http://%s:%d", address.String(), port))
 				args = append(args, "--publish-status-address=1.1.0.0")
-				// flags --publish-service and --publish-status-address are mutually exclusive
-				var index int
-				for k, v := range args {
-					if strings.Contains(v, "--publish-service") {
-						index = k
-						break
-					}
-				}
-				if index > -1 {
-					args[index] = ""
-				}
 
 				deployment.Spec.Template.Spec.Containers[0].Args = args
 				_, err := f.KubeClientSet.AppsV1().Deployments(f.Namespace).Update(deployment)
@@ -87,11 +84,11 @@ var _ = framework.IngressNginxDescribe("Status Update [Status]", func() {
 		err = cmd.Process.Kill()
 		Expect(err).NotTo(HaveOccurred(), "unexpected error terminating kubectl proxy")
 
-		ing, err = f.KubeClientSet.ExtensionsV1beta1().Ingresses(f.Namespace).Get(host, metav1.GetOptions{})
+		ing, err = f.KubeClientSet.NetworkingV1beta1().Ingresses(f.Namespace).Get(host, metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred(), "unexpected error getting %s/%v Ingress", f.Namespace, host)
 
 		ing.Status.LoadBalancer.Ingress = []apiv1.LoadBalancerIngress{}
-		_, err = f.KubeClientSet.ExtensionsV1beta1().Ingresses(f.Namespace).UpdateStatus(ing)
+		_, err = f.KubeClientSet.NetworkingV1beta1().Ingresses(f.Namespace).UpdateStatus(ing)
 		Expect(err).NotTo(HaveOccurred(), "unexpected error cleaning Ingress status")
 		time.Sleep(10 * time.Second)
 
@@ -109,8 +106,8 @@ var _ = framework.IngressNginxDescribe("Status Update [Status]", func() {
 			}
 		}()
 
-		err = wait.Poll(10*time.Second, framework.DefaultTimeout, func() (done bool, err error) {
-			ing, err = f.KubeClientSet.ExtensionsV1beta1().Ingresses(f.Namespace).Get(host, metav1.GetOptions{})
+		err = wait.Poll(5*time.Second, 4*time.Minute, func() (done bool, err error) {
+			ing, err = f.KubeClientSet.NetworkingV1beta1().Ingresses(f.Namespace).Get(host, metav1.GetOptions{})
 			if err != nil {
 				return false, nil
 			}

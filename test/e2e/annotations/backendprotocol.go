@@ -22,14 +22,11 @@ import (
 	"k8s.io/ingress-nginx/test/e2e/framework"
 )
 
-var _ = framework.IngressNginxDescribe("Annotations - Backendprotocol", func() {
+var _ = framework.DescribeAnnotation("backend-protocol", func() {
 	f := framework.NewDefaultFramework("backendprotocol")
 
 	BeforeEach(func() {
 		f.NewEchoDeploymentWithReplicas(2)
-	})
-
-	AfterEach(func() {
 	})
 
 	It("should set backend protocol to https:// and use proxy_pass", func() {
@@ -38,7 +35,7 @@ var _ = framework.IngressNginxDescribe("Annotations - Backendprotocol", func() {
 			"nginx.ingress.kubernetes.io/backend-protocol": "HTTPS",
 		}
 
-		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, &annotations)
+		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, annotations)
 		f.EnsureIngress(ing)
 
 		f.WaitForNginxServer(host,
@@ -53,7 +50,7 @@ var _ = framework.IngressNginxDescribe("Annotations - Backendprotocol", func() {
 			"nginx.ingress.kubernetes.io/backend-protocol": "GRPC",
 		}
 
-		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, &annotations)
+		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, annotations)
 		f.EnsureIngress(ing)
 
 		f.WaitForNginxServer(host,
@@ -68,7 +65,7 @@ var _ = framework.IngressNginxDescribe("Annotations - Backendprotocol", func() {
 			"nginx.ingress.kubernetes.io/backend-protocol": "GRPCS",
 		}
 
-		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, &annotations)
+		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, annotations)
 		f.EnsureIngress(ing)
 
 		f.WaitForNginxServer(host,
@@ -83,7 +80,7 @@ var _ = framework.IngressNginxDescribe("Annotations - Backendprotocol", func() {
 			"nginx.ingress.kubernetes.io/backend-protocol": "FCGI",
 		}
 
-		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, &annotations)
+		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, annotations)
 		f.EnsureIngress(ing)
 
 		f.WaitForNginxServer(host,
@@ -98,7 +95,7 @@ var _ = framework.IngressNginxDescribe("Annotations - Backendprotocol", func() {
 			"nginx.ingress.kubernetes.io/backend-protocol": "AJP",
 		}
 
-		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, &annotations)
+		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, annotations)
 		f.EnsureIngress(ing)
 
 		f.WaitForNginxServer(host,

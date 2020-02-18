@@ -18,9 +18,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
-	extensions "k8s.io/api/extensions/v1beta1"
+	networking "k8s.io/api/networking/v1beta1"
 	apiextcs "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -28,12 +29,10 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	restclient "k8s.io/client-go/rest"
-
-	"github.com/pkg/errors"
 	"k8s.io/klog"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/ginkgo"
+	"github.com/onsi/gomega"
 )
 
 // RequestScheme define a scheme used in a test request.
@@ -59,11 +58,6 @@ type Framework struct {
 	KubeConfig             *restclient.Config
 	APIExtensionsClientSet apiextcs.Interface
 
-	// To make sure that this framework cleans up after itself, no matter what,
-	// we install a Cleanup action before each test and clear it after. If we
-	// should abort, the AfterSuite hook should run all Cleanup actions.
-	cleanupHandle CleanupActionHandle
-
 	Namespace string
 }
 
@@ -74,82 +68,99 @@ func NewDefaultFramework(baseName string) *Framework {
 		BaseName: baseName,
 	}
 
-	BeforeEach(f.BeforeEach)
-	AfterEach(f.AfterEach)
+	ginkgo.BeforeEach(f.BeforeEach)
+	ginkgo.AfterEach(f.AfterEach)
 
 	return f
 }
 
 // BeforeEach gets a client and makes a namespace.
 func (f *Framework) BeforeEach() {
-	f.cleanupHandle = AddCleanupAction(f.AfterEach)
-
-	By("Creating a kubernetes client")
 	kubeConfig, err := restclient.InClusterConfig()
 	if err != nil {
 		panic(err.Error())
 	}
 
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 	f.KubeConfig = kubeConfig
 	f.KubeClientSet, err = kubernetes.NewForConfig(kubeConfig)
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
-	By("Building a namespace api object")
 	ingressNamespace, err := CreateKubeNamespace(f.BaseName, f.KubeClientSet)
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 	f.Namespace = ingressNamespace
 
-	By("Starting new ingress controller")
-	err = f.NewIngressController(f.Namespace, f.BaseName)
-	Expect(err).NotTo(HaveOccurred())
+	err = f.newIngressController(f.Namespace, f.BaseName)
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 	err = WaitForPodsReady(f.KubeClientSet, DefaultTimeout, 1, f.Namespace, metav1.ListOptions{
 		LabelSelector: "app.kubernetes.io/name=ingress-nginx",
 	})
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 }
 
 // AfterEach deletes the namespace, after reading its events.
 func (f *Framework) AfterEach() {
-	RemoveCleanupAction(f.cleanupHandle)
-
-	By("Waiting for test namespace to no longer exist")
-	err := DeleteKubeNamespace(f.KubeClientSet, f.Namespace)
-	Expect(err).NotTo(HaveOccurred())
-
-	if CurrentGinkgoTestDescription().Failed {
-		log, err := f.NginxLogs()
-		Expect(err).ToNot(HaveOccurred())
-		By("Dumping NGINX logs after a failure running a test")
-		Logf("%v", log)
-
+	if ginkgo.CurrentGinkgoTestDescription().Failed {
 		pod, err := getIngressNGINXPod(f.Namespace, f.KubeClientSet)
 		if err != nil {
+			Logf("Unexpected error searching for ingress controller pod: %v", err)
 			return
 		}
 
 		cmd := fmt.Sprintf("cat /etc/nginx/nginx.conf")
 		o, err := f.ExecCommand(pod, cmd)
 		if err != nil {
+			Logf("Unexpected error obtaining nginx.conf file: %v", err)
 			return
 		}
 
-		By("Dumping NGINX configuration after a failure running a test")
+		ginkgo.By("Dumping NGINX configuration after failure")
+		Logf("%v", o)
+
+		log, err := f.NginxLogs()
+		if err != nil {
+			Logf("Unexpected error obtaining NGINX logs: %v", err)
+			return
+		}
+
+		ginkgo.By("Dumping NGINX logs")
+		Logf("%v", log)
+
+		o, err = f.NamespaceContent()
+		if err != nil {
+			Logf("Unexpected error obtaining namespace information: %v", err)
+			return
+		}
+
+		ginkgo.By("Dumping namespace content")
 		Logf("%v", o)
 	}
+
+	err := DeleteKubeNamespace(f.KubeClientSet, f.Namespace)
+	gomega.Expect(err).NotTo(gomega.HaveOccurred(), "unexpected error deleting namespace %v", f.Namespace)
 }
 
 // IngressNginxDescribe wrapper function for ginkgo describe. Adds namespacing.
 func IngressNginxDescribe(text string, body func()) bool {
-	return Describe("[ingress-nginx] "+text, body)
+	return ginkgo.Describe(text, body)
+}
+
+// DescribeAnnotation wrapper function for ginkgo describe. Adds namespacing.
+func DescribeAnnotation(text string, body func()) bool {
+	return ginkgo.Describe("[Annotations] "+text, body)
+}
+
+// DescribeSetting wrapper function for ginkgo describe. Adds namespacing.
+func DescribeSetting(text string, body func()) bool {
+	return ginkgo.Describe("[Setting] "+text, body)
 }
 
 // MemoryLeakIt is wrapper function for ginkgo It.  Adds "[MemoryLeak]" tag and makes static analysis easier.
 func MemoryLeakIt(text string, body interface{}, timeout ...float64) bool {
-	return It(text+" [MemoryLeak]", body, timeout...)
+	return ginkgo.It(text+" [MemoryLeak]", body, timeout...)
 }
 
 // GetNginxIP returns the number of TCP port where NGINX is running
@@ -157,8 +168,8 @@ func (f *Framework) GetNginxIP() string {
 	s, err := f.KubeClientSet.
 		CoreV1().
 		Services(f.Namespace).
-		Get("ingress-nginx", metav1.GetOptions{})
-	Expect(err).NotTo(HaveOccurred(), "unexpected error obtaining NGINX IP address")
+		Get("nginx-ingress-controller", metav1.GetOptions{})
+	gomega.Expect(err).NotTo(gomega.HaveOccurred(), "unexpected error obtaining NGINX IP address")
 	return s.Spec.ClusterIP
 }
 
@@ -167,8 +178,8 @@ func (f *Framework) GetNginxPodIP() []string {
 	e, err := f.KubeClientSet.
 		CoreV1().
 		Endpoints(f.Namespace).
-		Get("ingress-nginx", metav1.GetOptions{})
-	Expect(err).NotTo(HaveOccurred(), "unexpected error obtaining NGINX IP address")
+		Get("nginx-ingress-controller", metav1.GetOptions{})
+	gomega.Expect(err).NotTo(gomega.HaveOccurred(), "unexpected error obtaining NGINX IP address")
 	eips := make([]string, 0)
 	for _, s := range e.Subsets {
 		for _, a := range s.Addresses {
@@ -188,14 +199,14 @@ func (f *Framework) GetURL(scheme RequestScheme) string {
 // WaitForNginxServer waits until the nginx configuration contains a particular server section
 func (f *Framework) WaitForNginxServer(name string, matcher func(cfg string) bool) {
 	err := wait.Poll(Poll, DefaultTimeout, f.matchNginxConditions(name, matcher))
-	Expect(err).NotTo(HaveOccurred(), "unexpected error waiting for nginx server condition/s")
+	gomega.Expect(err).NotTo(gomega.HaveOccurred(), "unexpected error waiting for nginx server condition/s")
 	time.Sleep(5 * time.Second)
 }
 
 // WaitForNginxConfiguration waits until the nginx configuration contains a particular configuration
 func (f *Framework) WaitForNginxConfiguration(matcher func(cfg string) bool) {
 	err := wait.Poll(Poll, DefaultTimeout, f.matchNginxConditions("", matcher))
-	Expect(err).NotTo(HaveOccurred(), "unexpected error waiting for nginx server condition/s")
+	gomega.Expect(err).NotTo(gomega.HaveOccurred(), "unexpected error waiting for nginx server condition/s")
 	time.Sleep(5 * time.Second)
 }
 
@@ -237,7 +248,7 @@ func (f *Framework) matchNginxConditions(name string, matcher func(cfg string) b
 		}
 
 		var match bool
-		errs := InterceptGomegaFailures(func() {
+		errs := gomega.InterceptGomegaFailures(func() {
 			if klog.V(10) && len(o) > 0 {
 				klog.Infof("nginx.conf:\n%v", o)
 			}
@@ -261,7 +272,7 @@ func (f *Framework) matchNginxConditions(name string, matcher func(cfg string) b
 }
 
 func (f *Framework) getNginxConfigMap() (*v1.ConfigMap, error) {
-	return f.getConfigMap("nginx-configuration")
+	return f.getConfigMap("nginx-ingress-controller")
 }
 
 func (f *Framework) getConfigMap(name string) (*v1.ConfigMap, error) {
@@ -280,36 +291,19 @@ func (f *Framework) getConfigMap(name string) (*v1.ConfigMap, error) {
 	return config, err
 }
 
-// GetNginxConfigMapData gets ingress-nginx's nginx-configuration map's data
-func (f *Framework) GetNginxConfigMapData() (map[string]string, error) {
-	config, err := f.getNginxConfigMap()
-	if err != nil {
-		return nil, err
-	}
-	if config.Data == nil {
-		config.Data = map[string]string{}
-	}
-
-	return config.Data, err
-}
-
-// SetNginxConfigMapData sets ingress-nginx's nginx-configuration configMap data
+// SetNginxConfigMapData sets ingress-nginx's nginx-ingress-controller configMap data
 func (f *Framework) SetNginxConfigMapData(cmData map[string]string) {
-	f.SetConfigMapData("nginx-configuration", cmData)
-}
+	cfgMap, err := f.getConfigMap("nginx-ingress-controller")
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	gomega.Expect(cfgMap).NotTo(gomega.BeNil(), "expected a configmap but none returned")
 
-func (f *Framework) SetConfigMapData(name string, cmData map[string]string) {
-	config, err := f.getConfigMap(name)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(config).NotTo(BeNil(), "expected a configmap but none returned")
-
-	config.Data = cmData
+	cfgMap.Data = cmData
 
 	_, err = f.KubeClientSet.
 		CoreV1().
 		ConfigMaps(f.Namespace).
-		Update(config)
-	Expect(err).NotTo(HaveOccurred())
+		Update(cfgMap)
+	gomega.Expect(err).NotTo(gomega.HaveOccurred(), "unexpected error updating configuration configmap")
 
 	time.Sleep(5 * time.Second)
 }
@@ -322,17 +316,23 @@ func (f *Framework) CreateConfigMap(name string, data map[string]string) {
 		},
 		Data: data,
 	})
-	Expect(err).NotTo(HaveOccurred(), "failed to create configMap")
+	gomega.Expect(err).NotTo(gomega.HaveOccurred(), "failed to create configMap")
 }
 
-// UpdateNginxConfigMapData updates single field in ingress-nginx's nginx-configuration map data
+// UpdateNginxConfigMapData updates single field in ingress-nginx's nginx-ingress-controller map data
 func (f *Framework) UpdateNginxConfigMapData(key string, value string) {
-	config, err := f.GetNginxConfigMapData()
-	Expect(err).NotTo(HaveOccurred(), "unexpected error reading configmap")
+	config, err := f.getConfigMap("nginx-ingress-controller")
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	gomega.Expect(config).NotTo(gomega.BeNil(), "expected a configmap but none returned")
 
-	config[key] = value
+	config.Data[key] = value
 
-	f.SetNginxConfigMapData(config)
+	_, err = f.KubeClientSet.
+		CoreV1().
+		ConfigMaps(f.Namespace).
+		Update(config)
+	gomega.Expect(err).NotTo(gomega.HaveOccurred(), "unexpected error updating configuration configmap")
+	time.Sleep(5 * time.Second)
 }
 
 // DeleteNGINXPod deletes the currently running pod. It waits for the replacement pod to be up.
@@ -340,10 +340,10 @@ func (f *Framework) UpdateNginxConfigMapData(key string, value string) {
 func (f *Framework) DeleteNGINXPod(grace int64) {
 	ns := f.Namespace
 	pod, err := getIngressNGINXPod(ns, f.KubeClientSet)
-	Expect(err).NotTo(HaveOccurred(), "expected ingress nginx pod to be running")
+	gomega.Expect(err).NotTo(gomega.HaveOccurred(), "expected ingress nginx pod to be running")
 
 	err = f.KubeClientSet.CoreV1().Pods(ns).Delete(pod.GetName(), metav1.NewDeleteOptions(grace))
-	Expect(err).NotTo(HaveOccurred(), "unexpected error deleting ingress nginx pod")
+	gomega.Expect(err).NotTo(gomega.HaveOccurred(), "unexpected error deleting ingress nginx pod")
 
 	err = wait.Poll(Poll, DefaultTimeout, func() (bool, error) {
 		pod, err := getIngressNGINXPod(ns, f.KubeClientSet)
@@ -352,7 +352,7 @@ func (f *Framework) DeleteNGINXPod(grace int64) {
 		}
 		return pod.GetName() != "", nil
 	})
-	Expect(err).NotTo(HaveOccurred(), "unexpected error while waiting for ingress nginx pod to come up again")
+	gomega.Expect(err).NotTo(gomega.HaveOccurred(), "unexpected error while waiting for ingress nginx pod to come up again")
 }
 
 // UpdateDeployment runs the given updateFunc on the deployment and waits for it to be updated
@@ -393,8 +393,8 @@ func UpdateDeployment(kubeClientSet kubernetes.Interface, namespace string, name
 }
 
 // UpdateIngress runs the given updateFunc on the ingress
-func UpdateIngress(kubeClientSet kubernetes.Interface, namespace string, name string, updateFunc func(d *extensions.Ingress) error) error {
-	ingress, err := kubeClientSet.ExtensionsV1beta1().Ingresses(namespace).Get(name, metav1.GetOptions{})
+func UpdateIngress(kubeClientSet kubernetes.Interface, namespace string, name string, updateFunc func(d *networking.Ingress) error) error {
+	ingress, err := kubeClientSet.NetworkingV1beta1().Ingresses(namespace).Get(name, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -403,37 +403,37 @@ func UpdateIngress(kubeClientSet kubernetes.Interface, namespace string, name st
 		return err
 	}
 
-	_, err = kubeClientSet.ExtensionsV1beta1().Ingresses(namespace).Update(ingress)
+	_, err = kubeClientSet.NetworkingV1beta1().Ingresses(namespace).Update(ingress)
 	return err
 }
 
 // NewSingleIngressWithTLS creates a simple ingress rule with TLS spec included
-func NewSingleIngressWithTLS(name, path, host string, tlsHosts []string, ns, service string, port int, annotations *map[string]string) *extensions.Ingress {
+func NewSingleIngressWithTLS(name, path, host string, tlsHosts []string, ns, service string, port int, annotations map[string]string) *networking.Ingress {
 	return newSingleIngressWithRules(name, path, host, ns, service, port, annotations, tlsHosts)
 }
 
 // NewSingleIngress creates a simple ingress rule
-func NewSingleIngress(name, path, host, ns, service string, port int, annotations *map[string]string) *extensions.Ingress {
+func NewSingleIngress(name, path, host, ns, service string, port int, annotations map[string]string) *networking.Ingress {
 	return newSingleIngressWithRules(name, path, host, ns, service, port, annotations, nil)
 }
 
 // NewSingleIngressWithMultiplePaths creates a simple ingress rule with multiple paths
-func NewSingleIngressWithMultiplePaths(name string, paths []string, host, ns, service string, port int, annotations *map[string]string) *extensions.Ingress {
-	spec := extensions.IngressSpec{
-		Rules: []extensions.IngressRule{
+func NewSingleIngressWithMultiplePaths(name string, paths []string, host, ns, service string, port int, annotations map[string]string) *networking.Ingress {
+	spec := networking.IngressSpec{
+		Rules: []networking.IngressRule{
 			{
 				Host: host,
-				IngressRuleValue: extensions.IngressRuleValue{
-					HTTP: &extensions.HTTPIngressRuleValue{},
+				IngressRuleValue: networking.IngressRuleValue{
+					HTTP: &networking.HTTPIngressRuleValue{},
 				},
 			},
 		},
 	}
 
 	for _, path := range paths {
-		spec.Rules[0].IngressRuleValue.HTTP.Paths = append(spec.Rules[0].IngressRuleValue.HTTP.Paths, extensions.HTTPIngressPath{
+		spec.Rules[0].IngressRuleValue.HTTP.Paths = append(spec.Rules[0].IngressRuleValue.HTTP.Paths, networking.HTTPIngressPath{
 			Path: path,
-			Backend: extensions.IngressBackend{
+			Backend: networking.IngressBackend{
 				ServiceName: service,
 				ServicePort: intstr.FromInt(port),
 			},
@@ -443,18 +443,17 @@ func NewSingleIngressWithMultiplePaths(name string, paths []string, host, ns, se
 	return newSingleIngress(name, ns, annotations, spec)
 }
 
-func newSingleIngressWithRules(name, path, host, ns, service string, port int, annotations *map[string]string, tlsHosts []string) *extensions.Ingress {
+func newSingleIngressWithRules(name, path, host, ns, service string, port int, annotations map[string]string, tlsHosts []string) *networking.Ingress {
 
-	spec := extensions.IngressSpec{
-		Rules: []extensions.IngressRule{
+	spec := networking.IngressSpec{
+		Rules: []networking.IngressRule{
 			{
-				Host: host,
-				IngressRuleValue: extensions.IngressRuleValue{
-					HTTP: &extensions.HTTPIngressRuleValue{
-						Paths: []extensions.HTTPIngressPath{
+				IngressRuleValue: networking.IngressRuleValue{
+					HTTP: &networking.HTTPIngressRuleValue{
+						Paths: []networking.HTTPIngressPath{
 							{
 								Path: path,
-								Backend: extensions.IngressBackend{
+								Backend: networking.IngressBackend{
 									ServiceName: service,
 									ServicePort: intstr.FromInt(port),
 								},
@@ -466,8 +465,13 @@ func newSingleIngressWithRules(name, path, host, ns, service string, port int, a
 		},
 	}
 
+	// allow ingresses without host field
+	if host != "" {
+		spec.Rules[0].Host = host
+	}
+
 	if len(tlsHosts) > 0 {
-		spec.TLS = []extensions.IngressTLS{
+		spec.TLS = []networking.IngressTLS{
 			{
 				Hosts:      tlsHosts,
 				SecretName: host,
@@ -479,21 +483,21 @@ func newSingleIngressWithRules(name, path, host, ns, service string, port int, a
 }
 
 // NewSingleIngressWithBackendAndRules creates an ingress with both a default backend and a rule
-func NewSingleIngressWithBackendAndRules(name, path, host, ns, defaultService string, defaultPort int, service string, port int, annotations *map[string]string) *extensions.Ingress {
-	spec := extensions.IngressSpec{
-		Backend: &extensions.IngressBackend{
+func NewSingleIngressWithBackendAndRules(name, path, host, ns, defaultService string, defaultPort int, service string, port int, annotations map[string]string) *networking.Ingress {
+	spec := networking.IngressSpec{
+		Backend: &networking.IngressBackend{
 			ServiceName: defaultService,
 			ServicePort: intstr.FromInt(defaultPort),
 		},
-		Rules: []extensions.IngressRule{
+		Rules: []networking.IngressRule{
 			{
 				Host: host,
-				IngressRuleValue: extensions.IngressRuleValue{
-					HTTP: &extensions.HTTPIngressRuleValue{
-						Paths: []extensions.HTTPIngressPath{
+				IngressRuleValue: networking.IngressRuleValue{
+					HTTP: &networking.HTTPIngressRuleValue{
+						Paths: []networking.HTTPIngressPath{
 							{
 								Path: path,
-								Backend: extensions.IngressBackend{
+								Backend: networking.IngressBackend{
 									ServiceName: service,
 									ServicePort: intstr.FromInt(port),
 								},
@@ -509,9 +513,9 @@ func NewSingleIngressWithBackendAndRules(name, path, host, ns, defaultService st
 }
 
 // NewSingleCatchAllIngress creates a simple ingress with a catch-all backend
-func NewSingleCatchAllIngress(name, ns, service string, port int, annotations *map[string]string) *extensions.Ingress {
-	spec := extensions.IngressSpec{
-		Backend: &extensions.IngressBackend{
+func NewSingleCatchAllIngress(name, ns, service string, port int, annotations map[string]string) *networking.Ingress {
+	spec := networking.IngressSpec{
+		Backend: &networking.IngressBackend{
 			ServiceName: service,
 			ServicePort: intstr.FromInt(port),
 		},
@@ -519,19 +523,19 @@ func NewSingleCatchAllIngress(name, ns, service string, port int, annotations *m
 	return newSingleIngress(name, ns, annotations, spec)
 }
 
-func newSingleIngress(name, ns string, annotations *map[string]string, spec extensions.IngressSpec) *extensions.Ingress {
+func newSingleIngress(name, ns string, annotations map[string]string, spec networking.IngressSpec) *networking.Ingress {
 	if annotations == nil {
-		annotations = &map[string]string{}
+		annotations = make(map[string]string)
 	}
 
-	ing := &extensions.Ingress{
+	ing := &networking.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        name,
-			Namespace:   ns,
-			Annotations: *annotations,
+			Name:      name,
+			Namespace: ns,
 		},
 		Spec: spec,
 	}
+	ing.SetAnnotations(annotations)
 
 	return ing
 }

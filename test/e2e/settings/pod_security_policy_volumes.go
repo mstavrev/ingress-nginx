@@ -17,7 +17,6 @@ limitations under the License.
 package settings
 
 import (
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -35,17 +34,17 @@ import (
 	"k8s.io/ingress-nginx/test/e2e/framework"
 )
 
-var _ = framework.IngressNginxDescribe("Pod Security Policies with volumes", func() {
+var _ = framework.IngressNginxDescribe("[Security] Pod Security Policies with volumes", func() {
 	f := framework.NewDefaultFramework("pod-security-policies-volumes")
 
 	It("should be running with a Pod Security Policy", func() {
 		psp := createPodSecurityPolicy()
-		_, err := f.KubeClientSet.ExtensionsV1beta1().PodSecurityPolicies().Create(psp)
+		_, err := f.KubeClientSet.PolicyV1beta1().PodSecurityPolicies().Create(psp)
 		if !k8sErrors.IsAlreadyExists(err) {
 			Expect(err).NotTo(HaveOccurred(), "creating Pod Security Policy")
 		}
 
-		role, err := f.KubeClientSet.RbacV1().ClusterRoles().Get(fmt.Sprintf("nginx-ingress-clusterrole-%v", f.Namespace), metav1.GetOptions{})
+		role, err := f.KubeClientSet.RbacV1().Roles(f.Namespace).Get("nginx-ingress-controller", metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred(), "getting ingress controller cluster role")
 		Expect(role).NotTo(BeNil())
 
@@ -56,7 +55,7 @@ var _ = framework.IngressNginxDescribe("Pod Security Policies with volumes", fun
 			Verbs:         []string{"use"},
 		})
 
-		_, err = f.KubeClientSet.RbacV1().ClusterRoles().Update(role)
+		_, err = f.KubeClientSet.RbacV1().Roles(f.Namespace).Update(role)
 		Expect(err).NotTo(HaveOccurred(), "updating ingress controller cluster role to use a pod security policy")
 
 		err = framework.UpdateDeployment(f.KubeClientSet, f.Namespace, "nginx-ingress-controller", 1,
@@ -96,7 +95,7 @@ var _ = framework.IngressNginxDescribe("Pod Security Policies with volumes", fun
 
 				return err
 			})
-		Expect(err).NotTo(HaveOccurred())
+		Expect(err).NotTo(HaveOccurred(), "unexpected error updating ingress controller deployment")
 
 		f.NewEchoDeployment()
 

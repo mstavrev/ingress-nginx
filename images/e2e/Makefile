@@ -14,20 +14,25 @@
 
 TAG ?=v$(shell date +%m%d%Y)-$(shell git rev-parse --short HEAD)
 REGISTRY ?= quay.io/kubernetes-ingress-controller
-DOCKER ?= docker
 
 IMAGE = $(REGISTRY)/e2e
 
 all: docker-build docker-push
 
 docker-build:
-	$(DOCKER) build \
+	docker buildx build \
 		--pull \
-		--build-arg K8S_RELEASE=v1.15.3 \
-		--build-arg ETCD_VERSION=v3.3.15 \
+		--load \
+		--progress plain \
+		--build-arg K8S_RELEASE=v1.15.7 \
+		--build-arg ETCD_VERSION=v3.3.18 \
+		--build-arg GOLANG_VERSION=1.13.8 \
+		--build-arg GOLANG_SHA=b13bf04633d4d8cf53226ebeaace8d4d2fd07ae6fa676d0844a688339debec34 \
+		--build-arg RESTY_CLI_VERSION=0.25rc2 \
+		--build-arg RESTY_CLI_SHA=a38d850441384fa037a5922ca012dcce8708d0e4abe34ad2fe4164a01b28bdfb \
 		-t $(IMAGE):$(TAG) .
 
 docker-push:
-	$(DOCKER) push $(IMAGE):$(TAG)
-	$(DOCKER) tag $(IMAGE):$(TAG) $(IMAGE):latest
-	$(DOCKER) push $(IMAGE):latest
+	docker push $(IMAGE):$(TAG)
+	docker tag $(IMAGE):$(TAG) $(IMAGE):latest
+	docker push $(IMAGE):latest

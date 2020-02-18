@@ -23,15 +23,12 @@ import (
 	"k8s.io/ingress-nginx/test/e2e/framework"
 )
 
-var _ = framework.IngressNginxDescribe("LuaSharedDict", func() {
+var _ = framework.DescribeSetting("[Lua] lua-shared-dicts", func() {
 	f := framework.NewDefaultFramework("lua-shared-dicts")
 	host := "lua-shared-dicts"
 
 	BeforeEach(func() {
 		f.NewEchoDeployment()
-	})
-
-	AfterEach(func() {
 	})
 
 	It("configures lua shared dicts", func() {

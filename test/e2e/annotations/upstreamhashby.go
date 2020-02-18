@@ -30,7 +30,7 @@ import (
 	"k8s.io/ingress-nginx/test/e2e/framework"
 )
 
-func startIngress(f *framework.Framework, annotations *map[string]string) map[string]bool {
+func startIngress(f *framework.Framework, annotations map[string]string) map[string]bool {
 	host := "upstream-hash-by.foo.com"
 
 	ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, annotations)
@@ -72,14 +72,11 @@ func startIngress(f *framework.Framework, annotations *map[string]string) map[st
 	return podMap
 }
 
-var _ = framework.IngressNginxDescribe("Annotations - UpstreamHashBy", func() {
+var _ = framework.DescribeAnnotation("upstream-hash-by-*", func() {
 	f := framework.NewDefaultFramework("upstream-hash-by")
 
 	BeforeEach(func() {
 		f.NewEchoDeploymentWithReplicas(6)
-	})
-
-	AfterEach(func() {
 	})
 
 	It("should connect to the same pod", func() {
@@ -87,7 +84,7 @@ var _ = framework.IngressNginxDescribe("Annotations - UpstreamHashBy", func() {
 			"nginx.ingress.kubernetes.io/upstream-hash-by": "$request_uri",
 		}
 
-		podMap := startIngress(f, &annotations)
+		podMap := startIngress(f, annotations)
 		Expect(len(podMap)).Should(Equal(1))
 
 	})
@@ -99,8 +96,7 @@ var _ = framework.IngressNginxDescribe("Annotations - UpstreamHashBy", func() {
 			"nginx.ingress.kubernetes.io/upstream-hash-by-subset-size": "3",
 		}
 
-		podMap := startIngress(f, &annotations)
+		podMap := startIngress(f, annotations)
 		Expect(len(podMap)).Should(Equal(3))
-
 	})
 })

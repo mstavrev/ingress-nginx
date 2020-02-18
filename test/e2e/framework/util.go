@@ -36,10 +36,10 @@ import (
 
 const (
 	// Poll how often to poll for conditions
-	Poll = 3 * time.Second
+	Poll = 2 * time.Second
 
 	// DefaultTimeout time to wait for operations to complete
-	DefaultTimeout = 3 * time.Minute
+	DefaultTimeout = 2 * time.Minute
 )
 
 func nowStamp() string {
@@ -107,7 +107,6 @@ func CreateKubeNamespace(baseName string, c kubernetes.Interface) (string, error
 			Logf("Unexpected error while creating namespace: %v", err)
 			return false, nil
 		}
-		Logf("Created namespace: %v", got.Name)
 		return true, nil
 	})
 	if err != nil {
@@ -118,7 +117,12 @@ func CreateKubeNamespace(baseName string, c kubernetes.Interface) (string, error
 
 // DeleteKubeNamespace deletes a namespace and all the objects inside
 func DeleteKubeNamespace(c kubernetes.Interface, namespace string) error {
-	return c.CoreV1().Namespaces().Delete(namespace, metav1.NewDeleteOptions(0))
+	grace := int64(0)
+	pb := metav1.DeletePropagationBackground
+	return c.CoreV1().Namespaces().Delete(namespace, &metav1.DeleteOptions{
+		GracePeriodSeconds: &grace,
+		PropagationPolicy:  &pb,
+	})
 }
 
 // ExpectNoError tests whether an error occurred.
@@ -235,7 +239,7 @@ func WaitForNoIngressInNamespace(c kubernetes.Interface, namespace, name string)
 
 func noIngressInNamespace(c kubernetes.Interface, namespace, name string) wait.ConditionFunc {
 	return func() (bool, error) {
-		ing, err := c.ExtensionsV1beta1().Ingresses(namespace).Get(name, metav1.GetOptions{})
+		ing, err := c.NetworkingV1beta1().Ingresses(namespace).Get(name, metav1.GetOptions{})
 		if apierrors.IsNotFound(err) {
 			return true, nil
 		}
@@ -257,7 +261,7 @@ func WaitForIngressInNamespace(c kubernetes.Interface, namespace, name string) e
 
 func ingressInNamespace(c kubernetes.Interface, namespace, name string) wait.ConditionFunc {
 	return func() (bool, error) {
-		ing, err := c.ExtensionsV1beta1().Ingresses(namespace).Get(name, metav1.GetOptions{})
+		ing, err := c.NetworkingV1beta1().Ingresses(namespace).Get(name, metav1.GetOptions{})
 		if apierrors.IsNotFound(err) {
 			return false, nil
 		}

@@ -14,7 +14,7 @@ data:
   ssl-protocols: SSLv2
 ```
 
-!!! Important
+!!! important
     The key and values in a ConfigMap can only be strings.
     This means that we want a value with boolean values we need to quote the values, like "true" or "false".
     Same for numbers, like "100".
@@ -131,6 +131,12 @@ The following table shows a configuration option's name, type, and the default v
 |[jaeger-debug-header](#jaeger-debug-header)|string|uber-debug-id|
 |[jaeger-baggage-header](#jaeger-baggage-header)|string|jaeger-baggage|
 |[jaeger-trace-baggage-header-prefix](#jaeger-trace-baggage-header-prefix)|string|uberctx-|
+|[datadog-collector-host](#datadog-collector-host)|string|""|
+|[datadog-collector-port](#datadog-collector-port)|int|8126|
+|[datadog-service-name](#datadog-service-name)|service|"nginx"|
+|[datadog-operation-name-override](#datadog-operation-name-override)|service|"nginx.handle"|
+|[datadog-priority-sampling](#datadog-priority-sampling)|bool|"true"|
+|[datadog-sample-rate](#datadog-sample-rate)|float|1.0|
 |[main-snippet](#main-snippet)|string|""|
 |[http-snippet](#http-snippet)|string|""|
 |[server-snippet](#server-snippet)|string|""|
@@ -557,6 +563,13 @@ _**default:**_ true
 ## use-geoip2
 
 Enables the [geoip2 module](https://github.com/leev/ngx_http_geoip2_module) for NGINX.
+Since `0.27.0` and due to a [change in the MaxMind databases](https://blog.maxmind.com/2019/12/18/significant-changes-to-accessing-and-using-geolite2-databases) a license is required to have access to the databases.
+For this reason, it is required to define a new flag `--maxmind-license-key` in the ingress controller deployment to download the databases needed during the initialization of the ingress controller.
+Alternatively, it is possible to use a volume to mount the files `/etc/nginx/geoip/GeoLite2-City.mmdb` and `/etc/nginx/geoip/GeoLite2-ASN.mmdb`, avoiding the overhead of the download.
+
+!!! important
+    If the feature is enabled but the files are missing, GeoIP2 will not be enabled.
+
 _**default:**_ false
 
 ## enable-brotli
@@ -582,6 +595,10 @@ Enables or disables [HTTP/2](http://nginx.org/en/docs/http/ngx_http_v2_module.ht
 ## gzip-level
 
 Sets the gzip Compression Level that will be used. _**default:**_ 5
+
+## gzip-min-length
+
+Minimum length of responses to be returned to the client before it is eligible for gzip compression, in bytes. _**default:**_ 256
 
 ## gzip-types
 
@@ -780,6 +797,32 @@ Specifies the header name used to submit baggage if there is no root span. _**de
 
 Specifies the header prefix used to propagate baggage. _**default:**_ uberctx-
 
+## datadog-collector-host
+
+Specifies the datadog agent host to use when uploading traces. It must be a valid URL.
+
+## datadog-collector-port
+
+Specifies the port to use when uploading traces. _**default:**_ 8126
+
+## datadog-service-name
+
+Specifies the service name to use for any traces created. _**default:**_ nginx
+
+## datadog-operation-name-override
+
+Overrides the operation naem to use for any traces crated. _**default:**_ nginx.handle
+
+## datadog-priority-sampling
+
+Specifies to use client-side sampling.
+If true disables client-side sampling (thus ignoring `sample_rate`) and enables distributed priority sampling, where traces are sampled based on a combination of user-assigned priorities and configuration from the agent. _**default:**_ true
+
+## datadog-sample-rate
+
+Specifies sample rate for any traces created.
+This is effective only when `datadog-priority-sampling` is `false` _**default:**_ 1.0
+
 ## main-snippet
 
 Adds custom configuration to the main section of the nginx configuration.
@@ -913,7 +956,7 @@ _**default:**_ 308
 
 > __Why the default code is 308?__
 
-> [RFC 7238](https://tools.ietf.org/html/rfc7238) was created to define the 308 (Permanent Redirect) status code that is similar to 301 (Moved Permanently) but it keeps the payload in the redirect. This is important if the we send a redirect in methods like POST.
+> [RFC 7238](https://tools.ietf.org/html/rfc7238) was created to define the 308 (Permanent Redirect) status code that is similar to 301 (Moved Permanently) but it keeps the payload in the redirect. This is important if we send a redirect in methods like POST.
 
 ## proxy-buffering
 

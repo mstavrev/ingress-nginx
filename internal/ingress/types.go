@@ -31,9 +31,9 @@ import (
 	"k8s.io/ingress-nginx/internal/ingress/annotations/influxdb"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/ipwhitelist"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/log"
-	"k8s.io/ingress-nginx/internal/ingress/annotations/luarestywaf"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/mirror"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/modsecurity"
+	"k8s.io/ingress-nginx/internal/ingress/annotations/opentracing"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/proxy"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/proxyssl"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/ratelimit"
@@ -144,12 +144,14 @@ type SessionAffinityConfig struct {
 // CookieSessionAffinity defines the structure used in Affinity configured by Cookies.
 // +k8s:deepcopy-gen=true
 type CookieSessionAffinity struct {
-	Name            string              `json:"name"`
-	Expires         string              `json:"expires,omitempty"`
-	MaxAge          string              `json:"maxage,omitempty"`
-	Locations       map[string][]string `json:"locations,omitempty"`
-	Path            string              `json:"path,omitempty"`
-	ChangeOnFailure bool                `json:"change_on_failure,omitempty"`
+	Name                    string              `json:"name"`
+	Expires                 string              `json:"expires,omitempty"`
+	MaxAge                  string              `json:"maxage,omitempty"`
+	Locations               map[string][]string `json:"locations,omitempty"`
+	Path                    string              `json:"path,omitempty"`
+	SameSite                string              `json:"samesite,omitempty"`
+	ConditionalSameSiteNone bool                `json:"conditional_samesite_none,omitempty"`
+	ChangeOnFailure         bool                `json:"change_on_failure,omitempty"`
 }
 
 // UpstreamHashByConfig described setting from the upstream-hash-by* annotations.
@@ -307,8 +309,6 @@ type Location struct {
 	// Logs allows to enable or disable the nginx logs
 	// By default access logs are enabled and rewrite logs are disabled
 	Logs log.Config `json:"logs,omitempty"`
-	// LuaRestyWAF contains parameters to configure lua-resty-waf
-	LuaRestyWAF luarestywaf.Config `json:"luaRestyWAF"`
 	// InfluxDB allows to monitor the incoming request by sending them to an influxdb database
 	// +optional
 	InfluxDB influxdb.Config `json:"influxDB,omitempty"`
@@ -329,6 +329,9 @@ type Location struct {
 	// Mirror allows you to mirror traffic to a "test" backend
 	// +optional
 	Mirror mirror.Config `json:"mirror,omitempty"`
+	// Opentracing allows the global opentracing setting to be overridden for a location
+	// +optional
+	Opentracing opentracing.Config `json:"opentracing"`
 }
 
 // SSLPassthroughBackend describes a SSL upstream server configured

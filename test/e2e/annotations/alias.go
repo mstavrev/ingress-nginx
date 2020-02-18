@@ -27,21 +27,18 @@ import (
 	"k8s.io/ingress-nginx/test/e2e/framework"
 )
 
-var _ = framework.IngressNginxDescribe("Annotations - Alias", func() {
+var _ = framework.DescribeAnnotation("server-alias", func() {
 	f := framework.NewDefaultFramework("alias")
 
 	BeforeEach(func() {
 		f.NewEchoDeployment()
 	})
 
-	AfterEach(func() {
-	})
-
 	It("should return status code 200 for host 'foo' and 404 for 'bar'", func() {
 		host := "foo"
 		annotations := map[string]string{}
 
-		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, &annotations)
+		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, annotations)
 		f.EnsureIngress(ing)
 
 		f.WaitForNginxServer(host,
@@ -74,7 +71,7 @@ var _ = framework.IngressNginxDescribe("Annotations - Alias", func() {
 			"nginx.ingress.kubernetes.io/server-alias": "bar",
 		}
 
-		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, &annotations)
+		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, annotations)
 		f.EnsureIngress(ing)
 
 		f.WaitForNginxServer(host,

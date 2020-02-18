@@ -22,14 +22,11 @@ import (
 	"k8s.io/ingress-nginx/test/e2e/framework"
 )
 
-var _ = framework.IngressNginxDescribe("Annotations - Client-Body-Buffer-Size", func() {
+var _ = framework.DescribeAnnotation("client-body-buffer-size", func() {
 	f := framework.NewDefaultFramework("clientbodybuffersize")
 
 	BeforeEach(func() {
 		f.NewEchoDeploymentWithReplicas(2)
-	})
-
-	AfterEach(func() {
 	})
 
 	It("should set client_body_buffer_size to 1000", func() {
@@ -38,7 +35,7 @@ var _ = framework.IngressNginxDescribe("Annotations - Client-Body-Buffer-Size", 
 			"nginx.ingress.kubernetes.io/client-body-buffer-size": "1000",
 		}
 
-		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, &annotations)
+		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, annotations)
 		f.EnsureIngress(ing)
 
 		f.WaitForNginxServer(host,
@@ -53,7 +50,7 @@ var _ = framework.IngressNginxDescribe("Annotations - Client-Body-Buffer-Size", 
 			"nginx.ingress.kubernetes.io/client-body-buffer-size": "1K",
 		}
 
-		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, &annotations)
+		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, annotations)
 		f.EnsureIngress(ing)
 
 		f.WaitForNginxServer(host,
@@ -68,7 +65,7 @@ var _ = framework.IngressNginxDescribe("Annotations - Client-Body-Buffer-Size", 
 			"nginx.ingress.kubernetes.io/client-body-buffer-size": "1k",
 		}
 
-		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, &annotations)
+		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, annotations)
 		f.EnsureIngress(ing)
 
 		f.WaitForNginxServer(host,
@@ -83,7 +80,7 @@ var _ = framework.IngressNginxDescribe("Annotations - Client-Body-Buffer-Size", 
 			"nginx.ingress.kubernetes.io/client-body-buffer-size": "1m",
 		}
 
-		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, &annotations)
+		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, annotations)
 		f.EnsureIngress(ing)
 
 		f.WaitForNginxServer(host,
@@ -98,7 +95,7 @@ var _ = framework.IngressNginxDescribe("Annotations - Client-Body-Buffer-Size", 
 			"nginx.ingress.kubernetes.io/client-body-buffer-size": "1M",
 		}
 
-		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, &annotations)
+		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, annotations)
 		f.EnsureIngress(ing)
 
 		f.WaitForNginxServer(host,
@@ -113,7 +110,7 @@ var _ = framework.IngressNginxDescribe("Annotations - Client-Body-Buffer-Size", 
 			"nginx.ingress.kubernetes.io/client-body-buffer-size": "1b",
 		}
 
-		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, &annotations)
+		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, annotations)
 		f.EnsureIngress(ing)
 
 		f.WaitForNginxServer(host,

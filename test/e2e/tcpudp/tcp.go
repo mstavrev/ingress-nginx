@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"net"
 	"strings"
-	"time"
 
 	"github.com/parnurzeal/gorequest"
 
@@ -35,18 +34,8 @@ import (
 	"k8s.io/ingress-nginx/test/e2e/framework"
 )
 
-const (
-	waitForLuaSync = 5 * time.Second
-)
-
-var _ = framework.IngressNginxDescribe("TCP Feature", func() {
+var _ = framework.IngressNginxDescribe("[TCP] tcp-services", func() {
 	f := framework.NewDefaultFramework("tcp")
-
-	BeforeEach(func() {
-	})
-
-	AfterEach(func() {
-	})
 
 	It("should expose a TCP service", func() {
 		f.NewEchoDeploymentWithReplicas(1)
@@ -73,7 +62,7 @@ var _ = framework.IngressNginxDescribe("TCP Feature", func() {
 		svc, err := f.KubeClientSet.
 			CoreV1().
 			Services(f.Namespace).
-			Get("ingress-nginx", metav1.GetOptions{})
+			Get("nginx-ingress-controller", metav1.GetOptions{})
 		Expect(err).To(BeNil(), "unexpected error obtaining ingress-nginx service")
 		Expect(svc).NotTo(BeNil(), "expected a service but none returned")
 
@@ -132,7 +121,7 @@ var _ = framework.IngressNginxDescribe("TCP Feature", func() {
 		svc, err := f.KubeClientSet.
 			CoreV1().
 			Services(f.Namespace).
-			Get("ingress-nginx", metav1.GetOptions{})
+			Get("nginx-ingress-controller", metav1.GetOptions{})
 		Expect(err).To(BeNil(), "unexpected error obtaining ingress-nginx service")
 		Expect(svc).NotTo(BeNil(), "expected a service but none returned")
 
@@ -166,8 +155,6 @@ var _ = framework.IngressNginxDescribe("TCP Feature", func() {
 			ConfigMaps(f.Namespace).
 			Update(config)
 		Expect(err).NotTo(HaveOccurred(), "unexpected error updating configmap")
-
-		time.Sleep(waitForLuaSync)
 
 		// Validate that the generated nginx config contains the expected `proxy_upstream_name` value
 		f.WaitForNginxConfiguration(

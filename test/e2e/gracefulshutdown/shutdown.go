@@ -28,7 +28,7 @@ import (
 	"k8s.io/ingress-nginx/test/e2e/framework"
 )
 
-var _ = framework.IngressNginxDescribe("Shutdown ingress controller", func() {
+var _ = framework.IngressNginxDescribe("[Shutdown] ingress controller", func() {
 	f := framework.NewDefaultFramework("shutdown-ingress-controller")
 
 	host := "shutdown"
@@ -37,9 +37,6 @@ var _ = framework.IngressNginxDescribe("Shutdown ingress controller", func() {
 		f.UpdateNginxConfigMapData("worker-shutdown-timeout", "600s")
 
 		f.NewSlowEchoDeployment()
-	})
-
-	AfterEach(func() {
 	})
 
 	It("should shutdown in less than 60 secons without pending connections", func() {
@@ -69,19 +66,20 @@ var _ = framework.IngressNginxDescribe("Shutdown ingress controller", func() {
 	}
 
 	It("should shutdown after waiting 60 seconds for pending connections to be closed", func() {
-		framework.UpdateDeployment(f.KubeClientSet, f.Namespace, "nginx-ingress-controller", 1,
+		err := framework.UpdateDeployment(f.KubeClientSet, f.Namespace, "nginx-ingress-controller", 1,
 			func(deployment *appsv1.Deployment) error {
 				grace := int64(3600)
 				deployment.Spec.Template.Spec.TerminationGracePeriodSeconds = &grace
 				_, err := f.KubeClientSet.AppsV1().Deployments(f.Namespace).Update(deployment)
 				return err
 			})
+		Expect(err).NotTo(HaveOccurred())
 
 		annotations := map[string]string{
 			"nginx.ingress.kubernetes.io/proxy-send-timeout": "600",
 			"nginx.ingress.kubernetes.io/proxy-read-timeout": "600",
 		}
-		f.EnsureIngress(framework.NewSingleIngress(host, "/", host, f.Namespace, framework.SlowEchoService, 80, &annotations))
+		f.EnsureIngress(framework.NewSingleIngress(host, "/", host, f.Namespace, framework.SlowEchoService, 80, annotations))
 
 		f.WaitForNginxServer(host,
 			func(server string) bool {
@@ -117,7 +115,7 @@ var _ = framework.IngressNginxDescribe("Shutdown ingress controller", func() {
 			case res := <-result:
 				Expect(res.errs).Should(BeEmpty())
 				Expect(res.status).To(Equal(http.StatusOK), "expecting a valid response from HTTP request")
-				Expect(time.Since(startTime).Seconds()).To(BeNumerically(">", 70), "waiting shutdown")
+				Expect(time.Since(startTime).Seconds()).To(BeNumerically(">", 60), "waiting shutdown")
 				ticker.Stop()
 				return
 			case <-ticker.C:
@@ -127,19 +125,20 @@ var _ = framework.IngressNginxDescribe("Shutdown ingress controller", func() {
 	})
 
 	It("should shutdown after waiting 150 seconds for pending connections to be closed", func() {
-		framework.UpdateDeployment(f.KubeClientSet, f.Namespace, "nginx-ingress-controller", 1,
+		err := framework.UpdateDeployment(f.KubeClientSet, f.Namespace, "nginx-ingress-controller", 1,
 			func(deployment *appsv1.Deployment) error {
 				grace := int64(3600)
 				deployment.Spec.Template.Spec.TerminationGracePeriodSeconds = &grace
 				_, err := f.KubeClientSet.AppsV1().Deployments(f.Namespace).Update(deployment)
 				return err
 			})
+		Expect(err).NotTo(HaveOccurred())
 
 		annotations := map[string]string{
 			"nginx.ingress.kubernetes.io/proxy-send-timeout": "600",
 			"nginx.ingress.kubernetes.io/proxy-read-timeout": "600",
 		}
-		f.EnsureIngress(framework.NewSingleIngress(host, "/", host, f.Namespace, framework.SlowEchoService, 80, &annotations))
+		f.EnsureIngress(framework.NewSingleIngress(host, "/", host, f.Namespace, framework.SlowEchoService, 80, annotations))
 
 		f.WaitForNginxServer(host,
 			func(server string) bool {

@@ -84,6 +84,8 @@ You can add these Kubernetes annotations to specific Ingress objects to customiz
 |[nginx.ingress.kubernetes.io/session-cookie-name](#cookie-affinity)|string|
 |[nginx.ingress.kubernetes.io/session-cookie-path](#cookie-affinity)|string|
 |[nginx.ingress.kubernetes.io/session-cookie-change-on-failure](#cookie-affinity)|"true" or "false"|
+|[nginx.ingress.kubernetes.io/session-cookie-samesite](#cookie-affinity)|string|
+|[nginx.ingress.kubernetes.io/session-cookie-conditional-samesite-none](#cookie-affinity)|"true" or "false"|
 |[nginx.ingress.kubernetes.io/ssl-redirect](#server-side-https-enforcement-through-redirect)|"true" or "false"|
 |[nginx.ingress.kubernetes.io/ssl-passthrough](#ssl-passthrough)|"true" or "false"|
 |[nginx.ingress.kubernetes.io/upstream-hash-by](#custom-nginx-upstream-hashing)|string|
@@ -98,6 +100,7 @@ You can add these Kubernetes annotations to specific Ingress objects to customiz
 |[nginx.ingress.kubernetes.io/ssl-ciphers](#ssl-ciphers)|string|
 |[nginx.ingress.kubernetes.io/connection-proxy-header](#connection-proxy-header)|string|
 |[nginx.ingress.kubernetes.io/enable-access-log](#enable-access-log)|"true" or "false"|
+|[nginx.ingress.kubernetes.io/enable-opentracing](#enable-opentracing)|"true" or "false"|
 |[nginx.ingress.kubernetes.io/lua-resty-waf](#lua-resty-waf)|string|
 |[nginx.ingress.kubernetes.io/lua-resty-waf-debug](#lua-resty-waf)|"true" or "false"|
 |[nginx.ingress.kubernetes.io/lua-resty-waf-ignore-rulesets](#lua-resty-waf)|string|
@@ -115,8 +118,8 @@ You can add these Kubernetes annotations to specific Ingress objects to customiz
 |[nginx.ingress.kubernetes.io/enable-owasp-core-rules](#modsecurity)|bool|
 |[nginx.ingress.kubernetes.io/modsecurity-transaction-id](#modsecurity)|string|
 |[nginx.ingress.kubernetes.io/modsecurity-snippet](#modsecurity)|string|
-|[nginx.ingress.kubernetes.io/mirror-uri](#mirror)|string|
 |[nginx.ingress.kubernetes.io/mirror-request-body](#mirror)|string|
+|[nginx.ingress.kubernetes.io/mirror-target](#mirror)|string|
 
 ### Canary
 
@@ -168,6 +171,7 @@ If you use the ``cookie`` affinity type you can also specify the name of the coo
 
 The NGINX annotation `nginx.ingress.kubernetes.io/session-cookie-path` defines the path that will be set on the cookie. This is optional unless the annotation `nginx.ingress.kubernetes.io/use-regex` is set to true; Session cookie paths do not support regex.
 
+Use `nginx.ingress.kubernetes.io/session-cookie-samesite` to apply a `SameSite` attribute to the sticky cookie. Browser accepted values are `None`, `Lax`, and `Strict`. Some browsers reject cookies with `SameSite=None`, including those created before the `SameSite=None` specification (e.g. Chrome 5X). Other browsers mistakenly treat `SameSite=None` cookies as `SameSite=Strict` (e.g. Safari running on OSX 14). To omit `SameSite=None` from browsers with these incompatibilities, add the annotation `nginx.ingress.kubernetes.io/session-cookie-conditional-samesite-none: "true"`.
 
 ### Authentication
 
@@ -348,7 +352,7 @@ Enables automatic conversion of preload links specified in the “Link” respon
 Allows the definition of one or more aliases in the server definition of the NGINX configuration using the annotation `nginx.ingress.kubernetes.io/server-alias: "<alias 1>,<alias 2>"`.
 This will create a server with the same configuration, but adding new values to the `server_name` directive.
 
-!!! Note
+!!! note
 	  A server-alias name cannot conflict with the hostname of an existing server. If it does, the server-alias annotation will be ignored.
     If a server-alias is created and later a new server with the same hostname is created, the new server configuration will take
     place over the alias configuration.
@@ -360,7 +364,7 @@ For more information please see [the `server_name` documentation](http://nginx.o
 Using the annotation `nginx.ingress.kubernetes.io/server-snippet` it is possible to add custom configuration in the server configuration block.
 
 ```yaml
-apiVersion: extensions/v1beta1
+apiVersion: networking.k8s.io/v1beta1
 kind: Ingress
 metadata:
   annotations:
@@ -442,7 +446,8 @@ By default the controller redirects all requests to an existing service that pro
 `nginx.ingress.kubernetes.io/enable-global-auth`:
    indicates if GlobalExternalAuth configuration should be applied or not to this Ingress rule. Default values is set to `"true"`.
 
-!!! note For more information please see [global-auth-url](./configmap.md#global-auth-url).
+!!! note
+    For more information please see [global-auth-url](./configmap.md#global-auth-url).
 
 ### Rate limiting
 
@@ -451,8 +456,8 @@ These annotations define limits on connections and transmission rates.  These ca
 * `nginx.ingress.kubernetes.io/limit-connections`: number of concurrent connections allowed from a single IP address. A 503 error is returned when exceeding this limit.
 * `nginx.ingress.kubernetes.io/limit-rps`: number of requests accepted from a given IP each second. The burst limit is set to 5 times the limit. When clients exceed this limit,  [limit-req-status-code](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/#limit-req-status-code) ***default:*** 503 is returned.
 * `nginx.ingress.kubernetes.io/limit-rpm`: number of requests accepted from a given IP each minute. The burst limit is set to 5 times the limit. When clients exceed this limit,  [limit-req-status-code](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/#limit-req-status-code) ***default:*** 503 is returned.
-* `nginx.ingress.kubernetes.io/limit-rate-after`: initial number of kilobytes after which the further transmission of a response to a given connection will be rate limited.
-* `nginx.ingress.kubernetes.io/limit-rate`: number of kilobytes per second allowed to send to a given connection.  The zero value disables rate limiting.
+* `nginx.ingress.kubernetes.io/limit-rate-after`: initial number of kilobytes after which the further transmission of a response to a given connection will be rate limited. This feature must be used with [proxy-buffering](#proxy-buffering) enabled.
+* `nginx.ingress.kubernetes.io/limit-rate`: number of kilobytes per second allowed to send to a given connection.  The zero value disables rate limiting. This feature must be used with [proxy-buffering](#proxy-buffering) enabled.
 * `nginx.ingress.kubernetes.io/limit-whitelist`: client IP source ranges to be excluded from rate-limiting. The value is a comma separated list of CIDRs.
 
 If you specify multiple annotations in a single Ingress rule, limits are applied in the order `limit-connections`, `limit-rpm`, `limit-rps`.
@@ -669,6 +674,15 @@ Note that rewrite logs are sent to the error_log file at the notice level. To en
 nginx.ingress.kubernetes.io/enable-rewrite-log: "true"
 ```
 
+### Enable Opentracing
+
+Opentracing can be enabled or disabled globally through the ConfigMap but this will sometimes need to be overridden
+to enable it or disable it for a specific ingress (e.g. to turn off tracing of external health check endpoints)
+
+```yaml
+nginx.ingress.kubernetes.io/enable-opentracing: "true"
+```
+
 ### X-Forwarded-Prefix Header
 To add the non-standard `X-Forwarded-Prefix` header to the upstream request with a string value, the following annotation can be used:
 
@@ -772,10 +786,17 @@ Note: If you use both `enable-owasp-core-rules` and `modsecurity-snippet` annota
 `modsecurity-snippet` will take effect. If you wish to include the [OWASP Core Rule Set](https://www.modsecurity.org/CRS/Documentation/) or
 [recommended configuration](https://github.com/SpiderLabs/ModSecurity/blob/v3/master/modsecurity.conf-recommended) simply use the include
 statement:
+
+nginx 0.24.1 and below
 ```yaml
 nginx.ingress.kubernetes.io/modsecurity-snippet: |
 Include /etc/nginx/owasp-modsecurity-crs/nginx-modsecurity.conf
 Include /etc/nginx/modsecurity/modsecurity.conf
+```
+nginx 0.25.0 and above
+```yaml
+nginx.ingress.kubernetes.io/modsecurity-snippet: |
+Include /etc/nginx/owasp-modsecurity-crs/nginx-modsecurity.conf
 ```
 
 ### InfluxDB
@@ -817,7 +838,7 @@ nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
 ### Use Regex
 
 !!! attention
-When using this annotation with the NGINX annotation `nginx.ingress.kubernetes.io/affinity` of type `cookie`,  `nginx.ingress.kubernetes.io/session-cookie-path` must be also set; Session cookie paths do not support regex.
+    When using this annotation with the NGINX annotation `nginx.ingress.kubernetes.io/affinity` of type `cookie`,  `nginx.ingress.kubernetes.io/session-cookie-path` must be also set; Session cookie paths do not support regex.
 
 Using the `nginx.ingress.kubernetes.io/use-regex` annotation will indicate whether or not the paths defined on an Ingress use regular expressions.  The default value is `false`.
 
@@ -849,19 +870,10 @@ nginx.ingress.kubernetes.io/satisfy: "any"
 
 Enables a request to be mirrored to a mirror backend. Responses by mirror backends are ignored. This feature is useful, to see how requests will react in "test" backends.
 
-You can mirror a request to the `/mirror` path on your ingress, by applying the below:
+The mirror backend can be set by applying:
 
 ```yaml
-nginx.ingress.kubernetes.io/mirror-uri: "/mirror"
-```
-
-The mirror path can be defined as a separate ingress resource:
-
-```
-location = /mirror {
-    internal;
-    proxy_pass http://test_backend;
-}
+nginx.ingress.kubernetes.io/mirror-target: https://test.env.com/$request_uri
 ```
 
 By default the request-body is sent to the mirror backend, but can be turned off by applying:
@@ -874,4 +886,4 @@ nginx.ingress.kubernetes.io/mirror-request-body: "off"
 
 The request sent to the mirror is linked to the orignial request. If you have a slow mirror backend, then the orignial request will throttle.
 
-For more information on the mirror module see https://nginx.org/en/docs/http/ngx_http_mirror_module.html
+For more information on the mirror module see [ngx_http_mirror_module](https://nginx.org/en/docs/http/ngx_http_mirror_module.html)

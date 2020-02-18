@@ -23,14 +23,11 @@ import (
 	"k8s.io/ingress-nginx/test/e2e/framework"
 )
 
-var _ = framework.IngressNginxDescribe("Annotations - SSL CIPHERS", func() {
+var _ = framework.DescribeAnnotation("ssl-ciphers", func() {
 	f := framework.NewDefaultFramework("sslciphers")
 
 	BeforeEach(func() {
 		f.NewEchoDeploymentWithReplicas(2)
-	})
-
-	AfterEach(func() {
 	})
 
 	It("should change ssl ciphers", func() {
@@ -39,7 +36,7 @@ var _ = framework.IngressNginxDescribe("Annotations - SSL CIPHERS", func() {
 			"nginx.ingress.kubernetes.io/ssl-ciphers": "ALL:!aNULL:!EXPORT56:RC4+RSA:+HIGH:+MEDIUM:+LOW:+SSLv2:+EXP",
 		}
 
-		ing := framework.NewSingleIngress(host, "/something", host, f.Namespace, framework.EchoService, 80, &annotations)
+		ing := framework.NewSingleIngress(host, "/something", host, f.Namespace, framework.EchoService, 80, annotations)
 		f.EnsureIngress(ing)
 
 		f.WaitForNginxServer(host,

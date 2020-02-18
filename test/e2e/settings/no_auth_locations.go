@@ -26,13 +26,13 @@ import (
 	"github.com/parnurzeal/gorequest"
 
 	corev1 "k8s.io/api/core/v1"
-	extensions "k8s.io/api/extensions/v1beta1"
+	networking "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/ingress-nginx/test/e2e/framework"
 )
 
-var _ = framework.IngressNginxDescribe("No Auth locations", func() {
+var _ = framework.DescribeSetting("[Security] no-auth-locations", func() {
 	f := framework.NewDefaultFramework("no-auth-locations")
 
 	setting := "no-auth-locations"
@@ -51,9 +51,6 @@ var _ = framework.IngressNginxDescribe("No Auth locations", func() {
 
 		bi := buildBasicAuthIngressWithSecondPath(host, f.Namespace, s.Name, noAuthPath)
 		f.EnsureIngress(bi)
-	})
-
-	AfterEach(func() {
 	})
 
 	It("should return status code 401 when accessing '/' unauthentication", func() {
@@ -104,8 +101,8 @@ var _ = framework.IngressNginxDescribe("No Auth locations", func() {
 	})
 })
 
-func buildBasicAuthIngressWithSecondPath(host, namespace, secretName, pathName string) *extensions.Ingress {
-	return &extensions.Ingress{
+func buildBasicAuthIngressWithSecondPath(host, namespace, secretName, pathName string) *networking.Ingress {
+	return &networking.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      host,
 			Namespace: namespace,
@@ -114,23 +111,23 @@ func buildBasicAuthIngressWithSecondPath(host, namespace, secretName, pathName s
 				"nginx.ingress.kubernetes.io/auth-realm":  "test auth",
 			},
 		},
-		Spec: extensions.IngressSpec{
-			Rules: []extensions.IngressRule{
+		Spec: networking.IngressSpec{
+			Rules: []networking.IngressRule{
 				{
 					Host: host,
-					IngressRuleValue: extensions.IngressRuleValue{
-						HTTP: &extensions.HTTPIngressRuleValue{
-							Paths: []extensions.HTTPIngressPath{
+					IngressRuleValue: networking.IngressRuleValue{
+						HTTP: &networking.HTTPIngressRuleValue{
+							Paths: []networking.HTTPIngressPath{
 								{
 									Path: "/",
-									Backend: extensions.IngressBackend{
+									Backend: networking.IngressBackend{
 										ServiceName: framework.EchoService,
 										ServicePort: intstr.FromInt(80),
 									},
 								},
 								{
 									Path: pathName,
-									Backend: extensions.IngressBackend{
+									Backend: networking.IngressBackend{
 										ServiceName: framework.EchoService,
 										ServicePort: intstr.FromInt(80),
 									},

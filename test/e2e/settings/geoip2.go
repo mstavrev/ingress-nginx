@@ -27,7 +27,7 @@ import (
 	"k8s.io/ingress-nginx/test/e2e/framework"
 )
 
-var _ = framework.IngressNginxDescribe("Geoip2", func() {
+var _ = framework.DescribeSetting("Geoip2", func() {
 	f := framework.NewDefaultFramework("geoip2")
 
 	host := "geoip2"
@@ -37,6 +37,8 @@ var _ = framework.IngressNginxDescribe("Geoip2", func() {
 	})
 
 	It("should only allow requests from specific countries", func() {
+		Skip("GeoIP test are temporarily disabled")
+
 		f.UpdateNginxConfigMapData("use-geoip2", "true")
 
 		httpSnippetAllowingOnlyAustralia :=
@@ -61,7 +63,7 @@ var _ = framework.IngressNginxDescribe("Geoip2", func() {
 			"nginx.ingress.kubernetes.io/configuration-snippet": configSnippet,
 		}
 
-		f.EnsureIngress(framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, &annotations))
+		f.EnsureIngress(framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, annotations))
 
 		f.WaitForNginxConfiguration(
 			func(cfg string) bool {

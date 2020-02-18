@@ -58,7 +58,7 @@ func (f *Framework) NewNewFastCGIHelloServerDeploymentWithReplicas(replicas int3
 					Containers: []corev1.Container{
 						{
 							Name:  "fastcgi-helloserver",
-							Image: "ingress-controller/fastcgi-helloserver:dev",
+							Image: "ingress-controller/fastcgi-helloserver:1.0.0-dev",
 							Env:   []corev1.EnvVar{},
 							Ports: []corev1.ContainerPort{
 								{
@@ -73,11 +73,9 @@ func (f *Framework) NewNewFastCGIHelloServerDeploymentWithReplicas(replicas int3
 		},
 	}
 
-	d, err := f.EnsureDeployment(deployment)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(d).NotTo(BeNil(), "expected a fastcgi-helloserver deployment")
+	d := f.EnsureDeployment(deployment)
 
-	err = WaitForPodsReady(f.KubeClientSet, DefaultTimeout, int(replicas), f.Namespace, metav1.ListOptions{
+	err := WaitForPodsReady(f.KubeClientSet, DefaultTimeout, int(replicas), f.Namespace, metav1.ListOptions{
 		LabelSelector: fields.SelectorFromSet(fields.Set(d.Spec.Template.ObjectMeta.Labels)).String(),
 	})
 	Expect(err).NotTo(HaveOccurred(), "failed to wait for to become ready")

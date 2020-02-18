@@ -26,14 +26,11 @@ import (
 	"k8s.io/ingress-nginx/test/e2e/framework"
 )
 
-var _ = framework.IngressNginxDescribe("Annotations - CORS", func() {
+var _ = framework.DescribeAnnotation("cors-*", func() {
 	f := framework.NewDefaultFramework("cors")
 
 	BeforeEach(func() {
 		f.NewEchoDeploymentWithReplicas(2)
-	})
-
-	AfterEach(func() {
 	})
 
 	It("should enable cors", func() {
@@ -42,7 +39,7 @@ var _ = framework.IngressNginxDescribe("Annotations - CORS", func() {
 			"nginx.ingress.kubernetes.io/enable-cors": "true",
 		}
 
-		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, &annotations)
+		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, annotations)
 		f.EnsureIngress(ing)
 
 		f.WaitForNginxServer(host,
@@ -86,7 +83,7 @@ var _ = framework.IngressNginxDescribe("Annotations - CORS", func() {
 			"nginx.ingress.kubernetes.io/cors-allow-methods": "POST, GET",
 		}
 
-		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, &annotations)
+		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, annotations)
 		f.EnsureIngress(ing)
 
 		f.WaitForNginxServer(host,
@@ -102,7 +99,7 @@ var _ = framework.IngressNginxDescribe("Annotations - CORS", func() {
 			"nginx.ingress.kubernetes.io/cors-max-age": "200",
 		}
 
-		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, &annotations)
+		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, annotations)
 		f.EnsureIngress(ing)
 
 		f.WaitForNginxServer(host,
@@ -118,7 +115,7 @@ var _ = framework.IngressNginxDescribe("Annotations - CORS", func() {
 			"nginx.ingress.kubernetes.io/cors-allow-credentials": "false",
 		}
 
-		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, &annotations)
+		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, annotations)
 		f.EnsureIngress(ing)
 
 		f.WaitForNginxServer(host,
@@ -134,7 +131,7 @@ var _ = framework.IngressNginxDescribe("Annotations - CORS", func() {
 			"nginx.ingress.kubernetes.io/cors-allow-origin": "https://origin.cors.com:8080",
 		}
 
-		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, &annotations)
+		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, annotations)
 		f.EnsureIngress(ing)
 
 		f.WaitForNginxServer(host,
@@ -150,7 +147,7 @@ var _ = framework.IngressNginxDescribe("Annotations - CORS", func() {
 			"nginx.ingress.kubernetes.io/cors-allow-headers": "DNT, User-Agent",
 		}
 
-		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, &annotations)
+		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, annotations)
 		f.EnsureIngress(ing)
 
 		f.WaitForNginxServer(host,

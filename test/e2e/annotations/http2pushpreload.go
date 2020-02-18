@@ -22,14 +22,11 @@ import (
 	"k8s.io/ingress-nginx/test/e2e/framework"
 )
 
-var _ = framework.IngressNginxDescribe("Annotations - HTTP2 Push Preload", func() {
+var _ = framework.DescribeAnnotation("http2-push-preload", func() {
 	f := framework.NewDefaultFramework("http2pushpreload")
 
 	BeforeEach(func() {
 		f.NewEchoDeploymentWithReplicas(2)
-	})
-
-	AfterEach(func() {
 	})
 
 	It("enable the http2-push-preload directive", func() {
@@ -38,7 +35,7 @@ var _ = framework.IngressNginxDescribe("Annotations - HTTP2 Push Preload", func(
 			"nginx.ingress.kubernetes.io/http2-push-preload": "true",
 		}
 
-		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, &annotations)
+		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, annotations)
 		f.EnsureIngress(ing)
 
 		f.WaitForNginxServer(host,

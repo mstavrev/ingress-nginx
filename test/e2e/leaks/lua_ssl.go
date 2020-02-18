@@ -33,14 +33,11 @@ import (
 	"k8s.io/ingress-nginx/test/e2e/framework"
 )
 
-var _ = framework.IngressNginxDescribe("DynamicCertificates", func() {
+var _ = framework.IngressNginxDescribe("[Memory Leak] Dynamic Certificates", func() {
 	f := framework.NewDefaultFramework("lua-dynamic-certificates")
 
 	BeforeEach(func() {
 		f.NewEchoDeployment()
-	})
-
-	AfterEach(func() {
 	})
 
 	framework.MemoryLeakIt("should not leak memory from ingress SSL certificates or configuration updates", func() {
@@ -104,7 +101,7 @@ func checkIngress(hostname string, f *framework.Framework) {
 }
 
 func deleteIngress(hostname string, f *framework.Framework) {
-	err := f.KubeClientSet.ExtensionsV1beta1().Ingresses(f.Namespace).Delete(hostname, &metav1.DeleteOptions{})
+	err := f.KubeClientSet.NetworkingV1beta1().Ingresses(f.Namespace).Delete(hostname, &metav1.DeleteOptions{})
 	Expect(err).NotTo(HaveOccurred(), "unexpected error deleting ingress")
 }
 

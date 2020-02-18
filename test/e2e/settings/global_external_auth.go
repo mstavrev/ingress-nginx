@@ -28,7 +28,7 @@ import (
 	"k8s.io/ingress-nginx/test/e2e/framework"
 )
 
-var _ = framework.IngressNginxDescribe("Global External Auth", func() {
+var _ = framework.DescribeSetting("[Security] global-auth-url", func() {
 	f := framework.NewDefaultFramework("global-external-auth")
 
 	host := "global-external-auth"
@@ -48,9 +48,6 @@ var _ = framework.IngressNginxDescribe("Global External Auth", func() {
 	BeforeEach(func() {
 		f.NewEchoDeployment()
 		f.NewHttpbinDeployment()
-	})
-
-	AfterEach(func() {
 	})
 
 	Context("when global external authentication is configured", func() {
@@ -125,7 +122,7 @@ var _ = framework.IngressNginxDescribe("Global External Auth", func() {
 			annotations := map[string]string{
 				enableGlobalExternalAuthAnnotation: "false",
 			}
-			barIng := framework.NewSingleIngress("bar-ingress", barPath, host, f.Namespace, echoServiceName, 80, &annotations)
+			barIng := framework.NewSingleIngress("bar-ingress", barPath, host, f.Namespace, echoServiceName, 80, annotations)
 			f.EnsureIngress(barIng)
 			f.WaitForNginxServer(host,
 				func(server string) bool {

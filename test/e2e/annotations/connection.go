@@ -27,14 +27,11 @@ import (
 	"k8s.io/ingress-nginx/test/e2e/framework"
 )
 
-var _ = framework.IngressNginxDescribe("Annotations - Connection", func() {
+var _ = framework.DescribeAnnotation("connection-proxy-header", func() {
 	f := framework.NewDefaultFramework("connection")
 
 	BeforeEach(func() {
 		f.NewEchoDeploymentWithReplicas(2)
-	})
-
-	AfterEach(func() {
 	})
 
 	It("set connection header to keep-alive", func() {
@@ -43,7 +40,7 @@ var _ = framework.IngressNginxDescribe("Annotations - Connection", func() {
 			"nginx.ingress.kubernetes.io/connection-proxy-header": "keep-alive",
 		}
 
-		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, &annotations)
+		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, annotations)
 		f.EnsureIngress(ing)
 
 		f.WaitForNginxServer(host,

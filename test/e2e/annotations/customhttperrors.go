@@ -22,7 +22,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	extensions "k8s.io/api/extensions/v1beta1"
+	networking "k8s.io/api/networking/v1beta1"
 
 	"k8s.io/ingress-nginx/test/e2e/framework"
 )
@@ -31,14 +31,11 @@ func errorBlockName(upstreamName string, errorCode string) string {
 	return fmt.Sprintf("@custom_%s_%s", upstreamName, errorCode)
 }
 
-var _ = framework.IngressNginxDescribe("Annotations - custom-http-errors", func() {
+var _ = framework.DescribeAnnotation("custom-http-errors", func() {
 	f := framework.NewDefaultFramework("custom-http-errors")
 
 	BeforeEach(func() {
 		f.NewEchoDeploymentWithReplicas(1)
-	})
-
-	AfterEach(func() {
 	})
 
 	It("configures Nginx correctly", func() {
@@ -50,7 +47,7 @@ var _ = framework.IngressNginxDescribe("Annotations - custom-http-errors", func(
 			"nginx.ingress.kubernetes.io/custom-http-errors": strings.Join(errorCodes, ","),
 		}
 
-		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, &annotations)
+		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, annotations)
 		f.EnsureIngress(ing)
 
 		var serverConfig string
@@ -73,7 +70,7 @@ var _ = framework.IngressNginxDescribe("Annotations - custom-http-errors", func(
 		}
 
 		By("updating configuration when only custom-http-error value changes")
-		err := framework.UpdateIngress(f.KubeClientSet, f.Namespace, host, func(ingress *extensions.Ingress) error {
+		err := framework.UpdateIngress(f.KubeClientSet, f.Namespace, host, func(ingress *networking.Ingress) error {
 			ingress.ObjectMeta.Annotations["nginx.ingress.kubernetes.io/custom-http-errors"] = "503"
 			return nil
 		})
@@ -91,7 +88,7 @@ var _ = framework.IngressNginxDescribe("Annotations - custom-http-errors", func(
 
 		By("ignoring duplicate values (503 in this case) per server")
 		annotations["nginx.ingress.kubernetes.io/custom-http-errors"] = "404, 503"
-		ing = framework.NewSingleIngress(fmt.Sprintf("%s-else", host), "/else", host, f.Namespace, framework.EchoService, 80, &annotations)
+		ing = framework.NewSingleIngress(fmt.Sprintf("%s-else", host), "/else", host, f.Namespace, framework.EchoService, 80, annotations)
 		f.EnsureIngress(ing)
 		f.WaitForNginxServer(host, func(sc string) bool {
 			serverConfig = sc
@@ -104,7 +101,7 @@ var _ = framework.IngressNginxDescribe("Annotations - custom-http-errors", func(
 		customDefaultBackend := "from-annotation"
 		f.NewEchoDeploymentWithNameAndReplicas(customDefaultBackend, 1)
 
-		err = framework.UpdateIngress(f.KubeClientSet, f.Namespace, host, func(ingress *extensions.Ingress) error {
+		err = framework.UpdateIngress(f.KubeClientSet, f.Namespace, host, func(ingress *networking.Ingress) error {
 			ingress.ObjectMeta.Annotations["nginx.ingress.kubernetes.io/default-backend"] = customDefaultBackend
 			return nil
 		})

@@ -24,14 +24,11 @@ import (
 	"k8s.io/ingress-nginx/test/e2e/framework"
 )
 
-var _ = framework.IngressNginxDescribe("Annotations - IPWhiteList", func() {
+var _ = framework.DescribeAnnotation("whitelist-source-range", func() {
 	f := framework.NewDefaultFramework("ipwhitelist")
 
 	BeforeEach(func() {
 		f.NewEchoDeploymentWithReplicas(2)
-	})
-
-	AfterEach(func() {
 	})
 
 	It("should set valid ip whitelist range", func() {
@@ -42,7 +39,7 @@ var _ = framework.IngressNginxDescribe("Annotations - IPWhiteList", func() {
 			"nginx.ingress.kubernetes.io/whitelist-source-range": "18.0.0.0/8, 56.0.0.0/8",
 		}
 
-		ing := framework.NewSingleIngress(host, "/", host, nameSpace, framework.EchoService, 80, &annotations)
+		ing := framework.NewSingleIngress(host, "/", host, nameSpace, framework.EchoService, 80, annotations)
 		f.EnsureIngress(ing)
 
 		f.WaitForNginxServer(host,

@@ -25,19 +25,19 @@ import (
 
 	"github.com/parnurzeal/gorequest"
 	appsv1 "k8s.io/api/apps/v1"
-	extensions "k8s.io/api/extensions/v1beta1"
+	networking "k8s.io/api/networking/v1beta1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"k8s.io/ingress-nginx/test/e2e/framework"
 )
 
-var _ = framework.IngressNginxDescribe("Disabled catch-all", func() {
+var _ = framework.IngressNginxDescribe("[Flag] disable-catch-all", func() {
 	f := framework.NewDefaultFramework("disabled-catch-all")
 
 	BeforeEach(func() {
 		f.NewEchoDeploymentWithReplicas(1)
 
-		framework.UpdateDeployment(f.KubeClientSet, f.Namespace, "nginx-ingress-controller", 1,
+		err := framework.UpdateDeployment(f.KubeClientSet, f.Namespace, "nginx-ingress-controller", 1,
 			func(deployment *appsv1.Deployment) error {
 				args := deployment.Spec.Template.Spec.Containers[0].Args
 				args = append(args, "--disable-catch-all=true")
@@ -46,9 +46,7 @@ var _ = framework.IngressNginxDescribe("Disabled catch-all", func() {
 
 				return err
 			})
-	})
-
-	AfterEach(func() {
+		Expect(err).NotTo(HaveOccurred(), "unexpected error updating ingress controller deployment flags")
 	})
 
 	It("should ignore catch all Ingress", func() {
@@ -88,9 +86,9 @@ var _ = framework.IngressNginxDescribe("Disabled catch-all", func() {
 		Expect(errs).To(BeNil())
 		Expect(resp.StatusCode).Should(Equal(http.StatusOK))
 
-		err := framework.UpdateIngress(f.KubeClientSet, f.Namespace, host, func(ingress *extensions.Ingress) error {
+		err := framework.UpdateIngress(f.KubeClientSet, f.Namespace, host, func(ingress *networking.Ingress) error {
 			ingress.Spec.Rules = nil
-			ingress.Spec.Backend = &extensions.IngressBackend{
+			ingress.Spec.Backend = &networking.IngressBackend{
 				ServiceName: framework.EchoService,
 				ServicePort: intstr.FromInt(80),
 			}

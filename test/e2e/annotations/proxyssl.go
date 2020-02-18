@@ -25,14 +25,11 @@ import (
 	"k8s.io/ingress-nginx/test/e2e/framework"
 )
 
-var _ = framework.IngressNginxDescribe("Annotations - ProxySSL", func() {
+var _ = framework.DescribeAnnotation("proxy-ssl-*", func() {
 	f := framework.NewDefaultFramework("proxyssl")
 
 	BeforeEach(func() {
 		f.NewEchoDeploymentWithReplicas(2)
-	})
-
-	AfterEach(func() {
 	})
 
 	It("should set valid proxy-ssl-secret", func() {
@@ -44,7 +41,7 @@ var _ = framework.IngressNginxDescribe("Annotations - ProxySSL", func() {
 		_, err := framework.CreateIngressMASecret(f.KubeClientSet, host, host, f.Namespace)
 		Expect(err).ToNot(HaveOccurred())
 
-		ing := framework.NewSingleIngressWithTLS(host, "/", host, []string{host}, f.Namespace, framework.EchoService, 80, &annotations)
+		ing := framework.NewSingleIngressWithTLS(host, "/", host, []string{host}, f.Namespace, framework.EchoService, 80, annotations)
 		f.EnsureIngress(ing)
 
 		assertProxySSL(f, host, "DEFAULT", "TLSv1 TLSv1.1 TLSv1.2", "off", 1)
@@ -61,7 +58,7 @@ var _ = framework.IngressNginxDescribe("Annotations - ProxySSL", func() {
 		_, err := framework.CreateIngressMASecret(f.KubeClientSet, host, host, f.Namespace)
 		Expect(err).ToNot(HaveOccurred())
 
-		ing := framework.NewSingleIngressWithTLS(host, "/", host, []string{host}, f.Namespace, framework.EchoService, 80, &annotations)
+		ing := framework.NewSingleIngressWithTLS(host, "/", host, []string{host}, f.Namespace, framework.EchoService, 80, annotations)
 		f.EnsureIngress(ing)
 
 		assertProxySSL(f, host, "DEFAULT", "TLSv1 TLSv1.1 TLSv1.2", "on", 2)
@@ -77,7 +74,7 @@ var _ = framework.IngressNginxDescribe("Annotations - ProxySSL", func() {
 		_, err := framework.CreateIngressMASecret(f.KubeClientSet, host, host, f.Namespace)
 		Expect(err).ToNot(HaveOccurred())
 
-		ing := framework.NewSingleIngressWithTLS(host, "/", host, []string{host}, f.Namespace, framework.EchoService, 80, &annotations)
+		ing := framework.NewSingleIngressWithTLS(host, "/", host, []string{host}, f.Namespace, framework.EchoService, 80, annotations)
 		f.EnsureIngress(ing)
 
 		assertProxySSL(f, host, "HIGH:!AES", "TLSv1 TLSv1.1 TLSv1.2", "off", 1)
@@ -93,7 +90,7 @@ var _ = framework.IngressNginxDescribe("Annotations - ProxySSL", func() {
 		_, err := framework.CreateIngressMASecret(f.KubeClientSet, host, host, f.Namespace)
 		Expect(err).ToNot(HaveOccurred())
 
-		ing := framework.NewSingleIngressWithTLS(host, "/", host, []string{host}, f.Namespace, framework.EchoService, 80, &annotations)
+		ing := framework.NewSingleIngressWithTLS(host, "/", host, []string{host}, f.Namespace, framework.EchoService, 80, annotations)
 		f.EnsureIngress(ing)
 
 		assertProxySSL(f, host, "DEFAULT", "TLSv1.2 TLSv1.3", "off", 1)

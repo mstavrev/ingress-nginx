@@ -19,7 +19,6 @@ package annotations
 import (
 	"fmt"
 	"net/http"
-	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -28,7 +27,7 @@ import (
 	"k8s.io/ingress-nginx/test/e2e/framework"
 )
 
-var _ = framework.IngressNginxDescribe("Annotations - custom default-backend", func() {
+var _ = framework.DescribeAnnotation("default-backend", func() {
 	f := framework.NewDefaultFramework("default-backend")
 
 	BeforeEach(func() {
@@ -42,10 +41,8 @@ var _ = framework.IngressNginxDescribe("Annotations - custom default-backend", f
 				"nginx.ingress.kubernetes.io/default-backend": framework.EchoService,
 			}
 
-			ing := framework.NewSingleIngress(host, "/", host, f.Namespace, "invalid", 80, &annotations)
+			ing := framework.NewSingleIngress(host, "/", host, f.Namespace, "invalid", 80, annotations)
 			f.EnsureIngress(ing)
-
-			time.Sleep(5 * time.Second)
 
 			f.WaitForNginxServer(host,
 				func(server string) bool {

@@ -34,14 +34,8 @@ func noRedirectPolicyFunc(gorequest.Request, []gorequest.Request) error {
 	return http.ErrUseLastResponse
 }
 
-var _ = framework.IngressNginxDescribe("Annotations - Redirect", func() {
+var _ = framework.DescribeAnnotation("permanen-redirect permanen-redirect-code", func() {
 	f := framework.NewDefaultFramework("redirect")
-
-	BeforeEach(func() {
-	})
-
-	AfterEach(func() {
-	})
 
 	It("should respond with a standard redirect code", func() {
 		By("setting permanent-redirect annotation")
@@ -52,7 +46,7 @@ var _ = framework.IngressNginxDescribe("Annotations - Redirect", func() {
 
 		annotations := map[string]string{"nginx.ingress.kubernetes.io/permanent-redirect": redirectURL}
 
-		ing := framework.NewSingleIngress(host, redirectPath, host, f.Namespace, framework.EchoService, 80, &annotations)
+		ing := framework.NewSingleIngress(host, redirectPath, host, f.Namespace, framework.EchoService, 80, annotations)
 		f.EnsureIngress(ing)
 
 		f.WaitForNginxServer(host,
@@ -72,7 +66,7 @@ var _ = framework.IngressNginxDescribe("Annotations - Redirect", func() {
 		Expect(errs).To(BeNil())
 		Expect(resp.StatusCode).Should(BeNumerically("==", http.StatusMovedPermanently))
 		Expect(resp.Header.Get("Location")).Should(Equal(redirectURL))
-		Expect(body).Should(ContainSubstring("openresty/"))
+		Expect(body).Should(ContainSubstring("nginx/"))
 	})
 
 	It("should respond with a custom redirect code", func() {
@@ -88,7 +82,7 @@ var _ = framework.IngressNginxDescribe("Annotations - Redirect", func() {
 			"nginx.ingress.kubernetes.io/permanent-redirect-code": strconv.Itoa(redirectCode),
 		}
 
-		ing := framework.NewSingleIngress(host, redirectPath, host, f.Namespace, framework.EchoService, 80, &annotations)
+		ing := framework.NewSingleIngress(host, redirectPath, host, f.Namespace, framework.EchoService, 80, annotations)
 		f.EnsureIngress(ing)
 
 		f.WaitForNginxServer(host,
@@ -108,6 +102,6 @@ var _ = framework.IngressNginxDescribe("Annotations - Redirect", func() {
 		Expect(errs).To(BeNil())
 		Expect(resp.StatusCode).Should(BeNumerically("==", redirectCode))
 		Expect(resp.Header.Get("Location")).Should(Equal(redirectURL))
-		Expect(body).Should(ContainSubstring("openresty/"))
+		Expect(body).Should(ContainSubstring("nginx/"))
 	})
 })

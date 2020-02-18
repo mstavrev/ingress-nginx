@@ -26,14 +26,11 @@ import (
 	"k8s.io/ingress-nginx/test/e2e/framework"
 )
 
-var _ = framework.IngressNginxDescribe("Annotations - Forcesslredirect", func() {
+var _ = framework.DescribeAnnotation("force-ssl-redirect", func() {
 	f := framework.NewDefaultFramework("forcesslredirect")
 
 	BeforeEach(func() {
 		f.NewEchoDeploymentWithReplicas(2)
-	})
-
-	AfterEach(func() {
 	})
 
 	It("should redirect to https", func() {
@@ -43,7 +40,7 @@ var _ = framework.IngressNginxDescribe("Annotations - Forcesslredirect", func() 
 			"nginx.ingress.kubernetes.io/force-ssl-redirect": "true",
 		}
 
-		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, &annotations)
+		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, annotations)
 		f.EnsureIngress(ing)
 
 		resp, _, errs := gorequest.New().

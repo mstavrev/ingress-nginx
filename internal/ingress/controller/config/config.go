@@ -66,7 +66,7 @@ const (
 
 	// Enabled ciphers list to enabled. The ciphers are specified in the format understood by the OpenSSL library
 	// http://nginx.org/en/docs/http/ngx_http_ssl_module.html#ssl_ciphers
-	sslCiphers = "ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256"
+	sslCiphers = "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384"
 
 	// SSL enabled protocols to use
 	// http://nginx.org/en/docs/http/ngx_http_ssl_module.html#ssl_protocols
@@ -393,6 +393,10 @@ type Configuration struct {
 	// gzip Compression Level that will be used
 	GzipLevel int `json:"gzip-level,omitempty"`
 
+	// Minimum length of responses to be sent to the client before it is eligible
+	// for gzip compression, in bytes.
+	GzipMinLength int `json:"gzip-min-length,omitempty"`
+
 	// MIME types in addition to "text/html" to compress. The special value “*” matches any MIME type.
 	// Responses with the “text/html” type are always compressed if UseGzip is enabled
 	GzipTypes string `json:"gzip-types,omitempty"`
@@ -552,6 +556,17 @@ type Configuration struct {
 	// Default: nginx.handle
 	DatadogOperationNameOverride string `json:"datadog-operation-name-override"`
 
+	// DatadogPrioritySampling specifies to use client-side sampling
+	// If true disables client-side sampling (thus ignoring sample_rate) and enables distributed
+	// priority sampling, where traces are sampled based on a combination of user-assigned
+	// Default: true
+	DatadogPrioritySampling bool `json:"datadog-priority-sampling"`
+
+	// DatadogSampleRate specifies sample rate for any traces created.
+	// This is effective only when datadog-priority-sampling is false
+	// Default: 1.0
+	DatadogSampleRate float32 `json:"datadog-sample-rate"`
+
 	// MainSnippet adds custom configuration to the main section of the nginx configuration
 	MainSnippet string `json:"main-snippet"`
 
@@ -609,10 +624,6 @@ type Configuration struct {
 	// authentication using an external provider
 	// +optional
 	GlobalExternalAuth GlobalExternalAuth `json:"global-external-auth"`
-
-	// DisableLuaRestyWAF disables lua-resty-waf globally regardless
-	// of whether there's an ingress that has enabled the WAF using annotation
-	DisableLuaRestyWAF bool `json:"disable-lua-resty-waf"`
 
 	// EnableInfluxDB enables the nginx InfluxDB extension
 	// http://github.com/influxdata/nginx-influxdb-module/
@@ -688,6 +699,7 @@ func NewDefault() Configuration {
 		HSTSPreload:                      false,
 		IgnoreInvalidHeaders:             true,
 		GzipLevel:                        5,
+		GzipMinLength:                    256,
 		GzipTypes:                        gzipTypes,
 		KeepAlive:                        75,
 		KeepAliveRequests:                100,
@@ -771,6 +783,8 @@ func NewDefault() Configuration {
 		DatadogServiceName:           "nginx",
 		DatadogCollectorPort:         8126,
 		DatadogOperationNameOverride: "nginx.handle",
+		DatadogSampleRate:            1.0,
+		DatadogPrioritySampling:      true,
 		LimitReqStatusCode:           503,
 		LimitConnStatusCode:          503,
 		SyslogPort:                   514,

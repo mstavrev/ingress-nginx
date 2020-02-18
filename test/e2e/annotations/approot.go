@@ -26,14 +26,11 @@ import (
 	"k8s.io/ingress-nginx/test/e2e/framework"
 )
 
-var _ = framework.IngressNginxDescribe("Annotations - Approot", func() {
+var _ = framework.DescribeAnnotation("app-root", func() {
 	f := framework.NewDefaultFramework("approot")
 
 	BeforeEach(func() {
 		f.NewEchoDeploymentWithReplicas(2)
-	})
-
-	AfterEach(func() {
 	})
 
 	It("should redirect to /foo", func() {
@@ -43,7 +40,7 @@ var _ = framework.IngressNginxDescribe("Annotations - Approot", func() {
 			"nginx.ingress.kubernetes.io/app-root": "/foo",
 		}
 
-		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, &annotations)
+		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, annotations)
 		f.EnsureIngress(ing)
 
 		f.WaitForNginxServer(host,

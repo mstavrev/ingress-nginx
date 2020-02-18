@@ -179,6 +179,12 @@ func (csa1 *CookieSessionAffinity) Equal(csa2 *CookieSessionAffinity) bool {
 	if csa1.MaxAge != csa2.MaxAge {
 		return false
 	}
+	if csa1.SameSite != csa2.SameSite {
+		return false
+	}
+	if csa1.ConditionalSameSiteNone != csa2.ConditionalSameSiteNone {
+		return false
+	}
 
 	return true
 }
@@ -404,9 +410,6 @@ func (l1 *Location) Equal(l2 *Location) bool {
 	if !(&l1.Logs).Equal(&l2.Logs) {
 		return false
 	}
-	if !(&l1.LuaRestyWAF).Equal(&l2.LuaRestyWAF) {
-		return false
-	}
 
 	if !(&l1.InfluxDB).Equal(&l2.InfluxDB) {
 		return false
@@ -437,11 +440,11 @@ func (l1 *Location) Equal(l2 *Location) bool {
 		return false
 	}
 
-	if l1.Mirror.URI != l2.Mirror.URI {
+	if !l1.Opentracing.Equal(&l2.Opentracing) {
 		return false
 	}
 
-	if l1.Mirror.RequestBody != l2.Mirror.RequestBody {
+	if !l1.Mirror.Equal(&l2.Mirror) {
 		return false
 	}
 

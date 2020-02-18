@@ -25,21 +25,15 @@ import (
 	"github.com/parnurzeal/gorequest"
 
 	corev1 "k8s.io/api/core/v1"
-	extensions "k8s.io/api/extensions/v1beta1"
+	networking "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"k8s.io/ingress-nginx/test/e2e/framework"
 )
 
-var _ = framework.IngressNginxDescribe("Service backend - 503", func() {
+var _ = framework.IngressNginxDescribe("[Service] backend status code 503", func() {
 	f := framework.NewDefaultFramework("service-backend")
-
-	BeforeEach(func() {
-	})
-
-	AfterEach(func() {
-	})
 
 	It("should return 503 when backend service does not exist", func() {
 		host := "nonexistent.svc.com"
@@ -65,9 +59,7 @@ var _ = framework.IngressNginxDescribe("Service backend - 503", func() {
 
 		bi, bs := buildIngressWithUnavailableServiceEndpoints(host, f.Namespace, "/")
 
-		svc := f.EnsureService(bs)
-		Expect(svc).NotTo(BeNil())
-
+		f.EnsureService(bs)
 		f.EnsureIngress(bi)
 
 		f.WaitForNginxServer(host,
@@ -85,23 +77,23 @@ var _ = framework.IngressNginxDescribe("Service backend - 503", func() {
 
 })
 
-func buildIngressWithNonexistentService(host, namespace, path string) *extensions.Ingress {
+func buildIngressWithNonexistentService(host, namespace, path string) *networking.Ingress {
 	backendService := "nonexistent-svc"
-	return &extensions.Ingress{
+	return &networking.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      host,
 			Namespace: namespace,
 		},
-		Spec: extensions.IngressSpec{
-			Rules: []extensions.IngressRule{
+		Spec: networking.IngressSpec{
+			Rules: []networking.IngressRule{
 				{
 					Host: host,
-					IngressRuleValue: extensions.IngressRuleValue{
-						HTTP: &extensions.HTTPIngressRuleValue{
-							Paths: []extensions.HTTPIngressPath{
+					IngressRuleValue: networking.IngressRuleValue{
+						HTTP: &networking.HTTPIngressRuleValue{
+							Paths: []networking.HTTPIngressPath{
 								{
 									Path: path,
-									Backend: extensions.IngressBackend{
+									Backend: networking.IngressBackend{
 										ServiceName: backendService,
 										ServicePort: intstr.FromInt(80),
 									},
@@ -115,23 +107,23 @@ func buildIngressWithNonexistentService(host, namespace, path string) *extension
 	}
 }
 
-func buildIngressWithUnavailableServiceEndpoints(host, namespace, path string) (*extensions.Ingress, *corev1.Service) {
+func buildIngressWithUnavailableServiceEndpoints(host, namespace, path string) (*networking.Ingress, *corev1.Service) {
 	backendService := "unavailable-svc"
-	return &extensions.Ingress{
+	return &networking.Ingress{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      host,
 				Namespace: namespace,
 			},
-			Spec: extensions.IngressSpec{
-				Rules: []extensions.IngressRule{
+			Spec: networking.IngressSpec{
+				Rules: []networking.IngressRule{
 					{
 						Host: host,
-						IngressRuleValue: extensions.IngressRuleValue{
-							HTTP: &extensions.HTTPIngressRuleValue{
-								Paths: []extensions.HTTPIngressPath{
+						IngressRuleValue: networking.IngressRuleValue{
+							HTTP: &networking.HTTPIngressRuleValue{
+								Paths: []networking.HTTPIngressPath{
 									{
 										Path: path,
-										Backend: extensions.IngressBackend{
+										Backend: networking.IngressBackend{
 											ServiceName: backendService,
 											ServicePort: intstr.FromInt(80),
 										},

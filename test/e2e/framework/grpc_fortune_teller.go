@@ -73,11 +73,9 @@ func (f *Framework) NewNewGRPCFortuneTellerDeploymentWithReplicas(replicas int32
 		},
 	}
 
-	d, err := f.EnsureDeployment(deployment)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(d).NotTo(BeNil(), "expected a fortune-teller deployment")
+	d := f.EnsureDeployment(deployment)
 
-	err = WaitForPodsReady(f.KubeClientSet, DefaultTimeout, int(replicas), f.Namespace, metav1.ListOptions{
+	err := WaitForPodsReady(f.KubeClientSet, DefaultTimeout, int(replicas), f.Namespace, metav1.ListOptions{
 		LabelSelector: fields.SelectorFromSet(fields.Set(d.Spec.Template.ObjectMeta.Labels)).String(),
 	})
 	Expect(err).NotTo(HaveOccurred(), "failed to wait for to become ready")

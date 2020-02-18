@@ -22,14 +22,11 @@ import (
 	"k8s.io/ingress-nginx/test/e2e/framework"
 )
 
-var _ = framework.IngressNginxDescribe("Annotations - Upstreamvhost", func() {
+var _ = framework.DescribeAnnotation("upstream-vhost", func() {
 	f := framework.NewDefaultFramework("upstreamvhost")
 
 	BeforeEach(func() {
 		f.NewEchoDeploymentWithReplicas(2)
-	})
-
-	AfterEach(func() {
 	})
 
 	It("set host to upstreamvhost.bar.com", func() {
@@ -38,7 +35,7 @@ var _ = framework.IngressNginxDescribe("Annotations - Upstreamvhost", func() {
 			"nginx.ingress.kubernetes.io/upstream-vhost": "upstreamvhost.bar.com",
 		}
 
-		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, &annotations)
+		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, annotations)
 		f.EnsureIngress(ing)
 
 		f.WaitForNginxServer(host,
