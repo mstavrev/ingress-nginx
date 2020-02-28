@@ -168,9 +168,11 @@ controller:
   config:
     worker-processes: "1"
   readinessProbe:
-    initialDelaySeconds: 1
+    initialDelaySeconds: 3
+    periodSeconds: 1
   livenessProbe:
-    initialDelaySeconds: 1
+    initialDelaySeconds: 3
+    periodSeconds: 1
   podLabels:
     app.kubernetes.io/name: ingress-nginx
     app.kubernetes.io/part-of: ingress-nginx
@@ -184,6 +186,8 @@ controller:
     # e2e tests do not require information about ingress status
     update-status: "false"
   terminationGracePeriodSeconds: 1
+  admissionWebhooks:
+    enabled: false
 
 defaultBackend:
   enabled: false

@@ -27,7 +27,7 @@ endif
 SHELL=/bin/bash -o pipefail -o errexit
 
 # Use the 0.0 tag for testing, it shouldn't clobber any release builds
-TAG ?= 0.29.0
+TAG ?= 0.30.0
 
 # Use docker to run makefile tasks
 USE_DOCKER ?= true
@@ -42,7 +42,7 @@ endif
 # Allow limiting the scope of the e2e tests. By default run everything
 FOCUS ?= .*
 # number of parallel test
-E2E_NODES ?= 15
+E2E_NODES ?= 10
 # slow test only if takes > 50s
 SLOW_E2E_THRESHOLD ?= 50
 # run e2e test suite with tests that check for memory leaks? (default is false)
@@ -60,7 +60,7 @@ ARCH ?= $(shell go env GOARCH)
 REGISTRY ?= quay.io/kubernetes-ingress-controller
 
 BASE_IMAGE ?= quay.io/kubernetes-ingress-controller/nginx
-BASE_TAG ?= 6ab10fa68ddea57fa51b37284b2678ac073ae74b
+BASE_TAG ?= c5db20ace43ada5b4c191df24c480fddceb5d482
 
 GOARCH=$(ARCH)
 GOBUILD_FLAGS := -v
@@ -120,7 +120,7 @@ push: .push-$(ARCH) ## Publish image for a particular arch.
 # internal task
 .PHONY: .push-$(ARCH)
 .push-$(ARCH):
-	docker push $(BASE_IMAGE)-$(ARCH):$(TAG)
+	docker push $(REGISTRY)/nginx-ingress-controller-${ARCH}:$(TAG)
 
 .PHONY: build
 build: check-go-version ## Build ingress controller, debug tool and pre-stop hook.
@@ -157,12 +157,12 @@ clean: ## Remove .gocache directory.
 	rm -rf bin/ .gocache/ .cache/
 
 .PHONY: static-check
-static-check: ## Run verification script for boilerplate, codegen, gofmt, golint and lualint.
+static-check: ## Run verification script for boilerplate, codegen, gofmt, golint, lualint and chart-lint.
 ifeq ($(USE_DOCKER), true)
 	@build/run-in-docker.sh \
-		build/static-check.sh
+		hack/verify-all.sh
 else
-	@build/static-check.sh
+	@hack/verify-all.sh
 endif
 
 .PHONY: test
@@ -236,8 +236,12 @@ dep-ensure: check-go-version ## Update and vendo go dependencies.
 	GO111MODULE=on go mod vendor
 
 .PHONY: dev-env
-dev-env: check-go-version ## Starts a local Kubernetes cluster using minikube, building and deploying the ingress controller.
+dev-env: check-go-version ## Starts a local Kubernetes cluster using kind, building and deploying the ingress controller.
 	@build/dev-env.sh
+
+.PHONY: dev-env-stop
+dev-env-stop: ## Deletes local Kubernetes cluster created by kind.
+	@kind delete cluster --name ingress-nginx-dev
 
 .PHONY: live-docs
 live-docs: ## Build and launch a local copy of the documentation website in http://localhost:3000
@@ -247,11 +251,6 @@ live-docs: ## Build and launch a local copy of the documentation website in http
 		--progress plain \
 		-t ingress-nginx/mkdocs images/mkdocs
 	@docker run --rm -it -p 3000:3000 -v ${PWD}:/docs ingress-nginx/mkdocs
-
-.PHONY: build-docs
-build-docs: ## Build documentation (output in ./site directory).
-	@docker build --pull -t ingress-nginx/mkdocs images/mkdocs
-	@docker run --rm -v ${PWD}:/docs ingress-nginx/mkdocs build
 
 .PHONY: misspell
 misspell: check-go-version ## Check for spelling errors.

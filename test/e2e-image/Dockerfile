@@ -1,4 +1,4 @@
-FROM quay.io/kubernetes-ingress-controller/e2e:v02132020-0e2ca1cc0 AS BASE
+FROM quay.io/kubernetes-ingress-controller/e2e:v02262020-a830e931d AS BASE
 
 FROM alpine:3.11
 
@@ -22,5 +22,7 @@ COPY namespace-overlays /namespace-overlays
 
 COPY wait-for-nginx.sh  /
 COPY e2e.test           /
+
+COPY charts /charts
 
 CMD [ "/e2e.sh" ]
