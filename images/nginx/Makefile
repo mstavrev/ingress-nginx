@@ -19,12 +19,12 @@ SHELL=/bin/bash -o pipefail
 
 # 0.0.0 shouldn't clobber any released builds
 TAG ?= 0.98
-REGISTRY ?= quay.io/kubernetes-ingress-controller
+REGISTRY ?= docker.io/mstavrev
 
 IMGNAME = nginx
 IMAGE = $(REGISTRY)/$(IMGNAME)
 
-PLATFORMS = amd64 arm arm64
+PLATFORMS = amd64
 
 EMPTY :=
 SPACE := $(EMPTY) $(EMPTY)
@@ -59,6 +59,6 @@ init-docker-buildx:
 ifneq ($(shell docker buildx 2>&1 >/dev/null; echo $?),)
 	$(error "buildx not vailable. Docker 19.03 or higher is required")
 endif
-	docker run --rm --privileged docker/binfmt:66f9012c56a8316f9244ffd7622d7c21c1f6f28d
+#	docker run --rm --privileged docker/binfmt:66f9012c56a8316f9244ffd7622d7c21c1f6f28d
 	docker buildx create --name ingress-nginx --use || true
 	docker buildx inspect --bootstrap

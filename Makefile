@@ -57,10 +57,10 @@ BUSTED_ARGS =-v --pattern=_test
 
 ARCH ?= $(shell go env GOARCH)
 
-REGISTRY ?= quay.io/kubernetes-ingress-controller
+REGISTRY ?= docker.io/mstavrev
 
-BASE_IMAGE ?= quay.io/kubernetes-ingress-controller/nginx
-BASE_TAG ?= c5db20ace43ada5b4c191df24c480fddceb5d482
+BASE_IMAGE ?= docker.io/mstavrev/nginx
+BASE_TAG ?= latest
 
 GOARCH=$(ARCH)
 GOBUILD_FLAGS := -v
@@ -278,7 +278,7 @@ ifeq ($(DIND_TASKS),)
 ifneq ($(shell docker buildx 2>&1 >/dev/null; echo $?),)
 	$(error "buildx not available. Docker 19.03 or higher is required with experimental features enabled")
 endif
-	docker run --rm --privileged docker/binfmt:66f9012c56a8316f9244ffd7622d7c21c1f6f28d
+	#docker run --rm --privileged docker/binfmt:66f9012c56a8316f9244ffd7622d7c21c1f6f28d
 	docker buildx create --name ingress-nginx --use || true
 	docker buildx inspect --bootstrap
 endif
