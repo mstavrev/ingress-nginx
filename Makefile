@@ -60,7 +60,7 @@ ARCH ?= $(shell go env GOARCH)
 REGISTRY ?= docker.io/mstavrev
 
 BASE_IMAGE ?= docker.io/mstavrev/nginx
-BASE_TAG ?= latest
+BASE_TAG ?= 0.98
 
 GOARCH=$(ARCH)
 GOBUILD_FLAGS := -v
