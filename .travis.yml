@@ -1,0 +1,23 @@
+dist: bionic
+
+sudo: required
+
+language: generic
+
+notifications:
+  email:
+    on_failure: always
+    on_success: always
+
+before_install:
+  - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+  - curl -fsSL https://get.docker.com | sh
+  - echo '{"experimental":"enabled"}' | sudo tee /etc/docker/daemon.json
+  - mkdir -p $HOME/.docker
+  - echo '{"experimental":"enabled"}' | tee $HOME/.docker/config.json
+  - sudo service docker start
+
+script:
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+  - cd images/nginx && make push
+  - cd ../.. && make release
