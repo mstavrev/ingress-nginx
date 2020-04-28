@@ -1,26 +1,28 @@
 {{- if or (eq .Values.controller.kind "Deployment") (eq .Values.controller.kind "Both") -}}
-apiVersion: {{ template "deployment.apiVersion" . }}
+{{- include  "isControllerTagValid" . -}}
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
     {{- include "ingress-nginx.labels" . | nindent 4 }}
     app.kubernetes.io/component: controller
   name: {{ include "ingress-nginx.controller.fullname" . }}
-{{- if .Values.controller.deploymentAnnotations }}
-  annotations: {{ toYaml .Values.controller.deploymentAnnotations | nindent 4 }}
-{{- end }}
+  {{- if .Values.controller.annotations }}
+  annotations: {{ toYaml .Values.controller.annotations | nindent 4 }}
+  {{- end }}
 spec:
   selector:
     matchLabels:
       {{- include "ingress-nginx.selectorLabels" . | nindent 6 }}
       app.kubernetes.io/component: controller
-{{- if not .Values.controller.autoscaling.enabled }}
+  {{- if not .Values.controller.autoscaling.enabled }}
   replicas: {{ .Values.controller.replicaCount }}
-{{- end }}
+  {{- end }}
   revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
-{{- if .Values.controller.updateStrategy }}
-  strategy: {{ toYaml .Values.controller.updateStrategy | nindent 4 }}
-{{- end }}
+  {{- if .Values.controller.updateStrategy }}
+  strategy:
+    {{ toYaml .Values.controller.updateStrategy | nindent 4 }}
+  {{- end }}
   minReadySeconds: {{ .Values.controller.minReadySeconds }}
   template:
     metadata:
@@ -85,6 +87,9 @@ spec:
           {{- if .Values.controller.maxmindLicenseKey }}
             - --maxmind-license-key={{ .Values.controller.maxmindLicenseKey }}
           {{- end }}
+          {{- if not (eq .Values.controller.healthCheckPath "/healthz") }}
+            - --health-check-path={{ .Values.controller.healthCheckPath }}
+          {{- end }}
           {{- range $key, $value := .Values.controller.extraArgs }}
             {{- if $value }}
             - --{{ $key }}={{ $value }}
@@ -109,12 +114,16 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
+          {{- if .Values.controller.enableMimalloc }}
+            - name: LD_PRELOAD
+              value: /usr/local/lib/libmimalloc.so
+          {{- end }}
           {{- if .Values.controller.extraEnvs }}
             {{- toYaml .Values.controller.extraEnvs | nindent 12 }}
           {{- end }}
           livenessProbe:
             httpGet:
-              path: /healthz
+              path: {{ .Values.controller.healthCheckPath }}
               port: {{ .Values.controller.livenessProbe.port }}
               scheme: HTTP
             initialDelaySeconds: {{ .Values.controller.livenessProbe.initialDelaySeconds }}
@@ -124,7 +133,7 @@ spec:
             failureThreshold: {{ .Values.controller.livenessProbe.failureThreshold }}
           readinessProbe:
             httpGet:
-              path: /healthz
+              path: {{ .Values.controller.healthCheckPath }}
               port: {{ .Values.controller.readinessProbe.port }}
               scheme: HTTP
             initialDelaySeconds: {{ .Values.controller.readinessProbe.initialDelaySeconds }}
@@ -137,6 +146,9 @@ spec:
             - name: {{ $key }}
               containerPort: {{ $value }}
               protocol: TCP
+              {{- if $.Values.controller.hostPort.enabled }}
+              hostPort: {{ index $.Values.controller.hostPort.ports $key | default $value }}
+              {{- end }}
           {{- end }}
           {{- if .Values.controller.metrics.enabled }}
             - name: metrics
@@ -152,11 +164,17 @@ spec:
             - name: {{ $key }}-tcp
               containerPort: {{ $key }}
               protocol: TCP
+              {{- if $.Values.controller.hostPort.enabled }}
+              hostPort: {{ $key }}
+              {{- end }}
           {{- end }}
           {{- range $key, $value := .Values.udp }}
             - name: {{ $key }}-udp
               containerPort: {{ $key }}
               protocol: UDP
+              {{- if $.Values.controller.hostPort.enabled }}
+              hostPort: {{ $key }}
+              {{- end }}
           {{- end }}
         {{- if (or .Values.controller.customTemplate.configMapName .Values.controller.extraVolumeMounts .Values.controller.admissionWebhooks.enabled) }}
           volumeMounts:

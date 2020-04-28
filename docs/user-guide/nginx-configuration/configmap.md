@@ -45,6 +45,7 @@ The following table shows a configuration option's name, type, and the default v
 |[disable-ipv6](#disable-ipv6)|bool|false|
 |[disable-ipv6-dns](#disable-ipv6-dns)|bool|false|
 |[enable-underscores-in-headers](#enable-underscores-in-headers)|bool|false|
+|[enable-ocsp](#enable-ocsp)|bool|false|
 |[ignore-invalid-headers](#ignore-invalid-headers)|bool|true|
 |[retry-non-idempotent](#retry-non-idempotent)|bool|"false"|
 |[error-log-level](#error-log-level)|string|"notice"|
@@ -74,6 +75,7 @@ The following table shows a configuration option's name, type, and the default v
 |[server-name-hash-bucket-size](#server-name-hash-bucket-size)|int|`<size of the processor’s cache line>`
 |[proxy-headers-hash-max-size](#proxy-headers-hash-max-size)|int|512|
 |[proxy-headers-hash-bucket-size](#proxy-headers-hash-bucket-size)|int|64|
+|[plugins](#plugins)|[]string| |
 |[reuse-port](#reuse-port)|bool|"true"|
 |[server-tokens](#server-tokens)|bool|"true"|
 |[ssl-ciphers](#ssl-ciphers)|string|"ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256"|
@@ -281,6 +283,11 @@ Disable IPV6 for nginx DNS resolver. _**default:**_ `false`; IPv6 resolving enab
 
 Enables underscores in header names. _**default:**_ is disabled
 
+## enable-ocsp
+
+Enables [Online Certificate Status Protocol stapling](https://en.wikipedia.org/wiki/OCSP_stapling) (OCSP) support.
+_**default:**_ is disabled
+
 ## ignore-invalid-headers
 
 Set if header fields with invalid names should be ignored.
@@ -465,6 +472,10 @@ _References:_
 - [http://nginx.org/en/docs/hash.html](http://nginx.org/en/docs/hash.html)
 - [https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_headers_hash_bucket_size](https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_headers_hash_bucket_size)
 
+## plugins
+
+Activates plugins installed in `/etc/nginx/lua/plugins`. Refer to [ingress-nginx plugins README](https://github.com/kubernetes/ingress-nginx/blob/master/rootfs/etc/nginx/lua/plugins/README.md) for more information on how to write and install a plugin.
+
 ## server-tokens
 
 Send NGINX Server header in responses and display NGINX version in error pages. _**default:**_ is enabled
@@ -603,7 +614,7 @@ Minimum length of responses to be returned to the client before it is eligible f
 
 ## gzip-types
 
-Sets the MIME types in addition to "text/html" to compress. The special value "\*" matches any MIME type. Responses with the "text/html" type are always compressed if `[use-gzip](#use-gzip)` is enabled.
+Sets the MIME types in addition to "text/html" to compress. The special value "\*" matches any MIME type. Responses with the "text/html" type are always compressed if [`use-gzip`](#use-gzip) is enabled.
 _**default:**_ `application/atom+xml application/javascript application/x-javascript application/json application/rss+xml application/vnd.ms-fontobject application/x-font-ttf application/x-web-app-manifest+json application/xhtml+xml application/xml font/opentype image/svg+xml image/x-icon text/css text/plain text/x-component`.
 
 ## worker-processes

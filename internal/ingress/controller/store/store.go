@@ -17,6 +17,7 @@ limitations under the License.
 package store
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"io/ioutil"
@@ -24,8 +25,6 @@ import (
 	"sort"
 	"sync"
 	"time"
-
-	"k8s.io/klog"
 
 	"github.com/eapache/channels"
 	corev1 "k8s.io/api/core/v1"
@@ -35,6 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/informers"
 	clientset "k8s.io/client-go/kubernetes"
@@ -42,6 +42,7 @@ import (
 	clientcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/klog"
 
 	"k8s.io/ingress-nginx/internal/file"
 	"k8s.io/ingress-nginx/internal/ingress"
@@ -290,11 +291,11 @@ func New(
 		&cache.ListWatch{
 			ListFunc: func(options metav1.ListOptions) (k8sruntime.Object, error) {
 				options.LabelSelector = labelSelector.String()
-				return client.CoreV1().Pods(store.pod.Namespace).List(options)
+				return client.CoreV1().Pods(store.pod.Namespace).List(context.TODO(), options)
 			},
 			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
 				options.LabelSelector = labelSelector.String()
-				return client.CoreV1().Pods(store.pod.Namespace).Watch(options)
+				return client.CoreV1().Pods(store.pod.Namespace).Watch(context.TODO(), options)
 			},
 		},
 		&corev1.Pod{},
@@ -623,7 +624,7 @@ func New(
 
 	// do not wait for informers to read the configmap configuration
 	ns, name, _ := k8s.ParseNameNS(configmap)
-	cm, err := client.CoreV1().ConfigMaps(ns).Get(name, metav1.GetOptions{})
+	cm, err := client.CoreV1().ConfigMaps(ns).Get(context.TODO(), name, metav1.GetOptions{})
 	if err != nil {
 		klog.Warningf("Unexpected error reading configuration configmap: %v", err)
 	}
@@ -637,6 +638,9 @@ func New(
 func isCatchAllIngress(spec networkingv1beta1.IngressSpec) bool {
 	return spec.Backend != nil && len(spec.Rules) == 0
 }
+
+// Default path type is Prefix to not break existing definitions
+var defaultPathType = networkingv1beta1.PathTypePrefix
 
 // syncIngress parses ingress annotations converting the value of the
 // annotation to a go struct
@@ -657,6 +661,17 @@ func (s *k8sStore) syncIngress(ing *networkingv1beta1.Ingress) {
 		for pi, path := range rule.HTTP.Paths {
 			if path.Path == "" {
 				copyIng.Spec.Rules[ri].HTTP.Paths[pi].Path = "/"
+			}
+
+			if path.PathType == nil {
+				copyIng.Spec.Rules[ri].HTTP.Paths[pi].PathType = &defaultPathType
+				continue
+			}
+
+			// PathType ImplementationSpecific is not supported.
+			// Set type to PathTypePrefix.
+			if *path.PathType == networkingv1beta1.PathTypeImplementationSpecific {
+				copyIng.Spec.Rules[ri].HTTP.Paths[pi].PathType = &defaultPathType
 			}
 		}
 	}
@@ -924,8 +939,8 @@ func (s k8sStore) GetRunningControllerPodsCount() int {
 var runtimeScheme = k8sruntime.NewScheme()
 
 func init() {
-	extensionsv1beta1.AddToScheme(runtimeScheme)
-	networkingv1beta1.AddToScheme(runtimeScheme)
+	utilruntime.Must(extensionsv1beta1.AddToScheme(runtimeScheme))
+	utilruntime.Must(networkingv1beta1.AddToScheme(runtimeScheme))
 }
 
 func fromExtensions(old *extensionsv1beta1.Ingress) (*networkingv1beta1.Ingress, error) {
@@ -948,10 +963,12 @@ func toIngress(obj interface{}) (*networkingv1beta1.Ingress, bool) {
 			return nil, false
 		}
 
+		k8s.SetDefaultPathTypeIfEmpty(ing)
 		return ing, true
 	}
 
 	if ing, ok := obj.(*networkingv1beta1.Ingress); ok {
+		k8s.SetDefaultPathTypeIfEmpty(ing)
 		return ing, true
 	}
 
