@@ -8,6 +8,11 @@
 !!! warning
     If multiple Ingresses define paths for the same host, the ingress controller **merges the definitions**.
 
+!!! danger
+    The [admission webhook](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/) require conectivity between Kubernetes API server and the ingress controller.
+
+    In case [Network policies](https://kubernetes.io/docs/concepts/services-networking/network-policies/) or additional firewalls, please allow access to port `8443`.
+
 ## Contents
 
 - [Provider Specific Steps](#provider-specific-steps)
@@ -16,6 +21,7 @@
   - [AWS](#aws)
   - [GCE - GKE](#gce-gke)
   - [Azure](#azure)
+  - [Digital Ocean](#digital-ocean)
   - [Bare-metal](#bare-metal)
   - [Verify installation](#verify-installation)
   - [Detect installed version](#detect-installed-version)
@@ -30,7 +36,7 @@ Kubernetes is available in Docker for Mac (from [version 18.06.0-ce](https://doc
 [enable]: https://docs.docker.com/docker-for-mac/#kubernetes
 
 ```console
-kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-0.31.1/deploy/static/provider/cloud/deploy.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-0.32.0/deploy/static/provider/cloud/deploy.yaml
 ```
 
 #### minikube
@@ -65,7 +71,7 @@ In AWS we use a Network load balancer (NLB) to expose the NGINX Ingress controll
 ##### Network Load Balancer (NLB)
 
 ```console
-kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-0.31.1/deploy/static/provider/aws/deploy.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-0.32.0/deploy/static/provider/aws/deploy.yaml
 ```
 
 ##### TLS termination in AWS Load Balancer (ELB)
@@ -74,10 +80,10 @@ In some scenarios is required to terminate TLS in the Load Balancer and not in t
 
 For this purpose we provide a template:
 
-- Download [deploy-tls-termination.yaml](https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-0.31.1/deploy/static/provider/aws/deploy-tls-termination.yaml)
+- Download [deploy-tls-termination.yaml](https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-0.32.0/deploy/static/provider/aws/deploy-tls-termination.yaml)
 
 ```console
-wget https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-0.31.1/deploy/static/provider/aws/deploy-tls-termination.yaml
+wget https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-0.32.0/deploy/static/provider/aws/deploy-tls-termination.yaml
 ```
 
 - Edit the file and change:
@@ -120,17 +126,29 @@ More information with regards to timeouts for can be found in the [official AWS 
       --user $(gcloud config get-value account)
     ```
 
+!!! danger
+    For private clusters, you will need to either add an additional firewall rule that allows master nodes access port `8443/tcp` on worker nodes, or change the existing rule that allows access to ports `80/tcp`, `443/tcp` and `10254/tcp` to also allow access to port `8443/tcp`.
+
+    See the [GKE documentation](https://cloud.google.com/kubernetes-engine/docs/how-to/private-clusters#add_firewall_rules) on adding rules and the [Kubernetes issue](https://github.com/kubernetes/kubernetes/issues/79739) for more detail.
+
+
 ```console
-kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-0.31.1/deploy/static/provider/cloud/deploy.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-0.32.0/deploy/static/provider/cloud/deploy.yaml
 ```
 
-!!! warning Important
+!!! failure Important
     Proxy protocol is not supported in GCE/GKE
 
 #### Azure
 
 ```console
-kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-0.31.1/deploy/static/provider/cloud/deploy.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-0.32.0/deploy/static/provider/cloud/deploy.yaml
+```
+
+#### Digital Ocean
+
+```console
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-0.32.0/deploy/static/provider/do/deploy.yaml
 ```
 
 #### Bare-metal
@@ -138,7 +156,7 @@ kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/cont
 Using [NodePort](https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport):
 
 ```console
-kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-0.31.1/deploy/static/provider/baremetal/deploy.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-0.32.0/deploy/static/provider/baremetal/deploy.yaml
 ```
 
 !!! tip
@@ -181,8 +199,8 @@ helm install my-release ingress-nginx/ingress-nginx
 If you are using [Helm 2](https://v2.helm.sh/) then specify release name using `--name` flag
 
 ```console
-helm repo add https://kubernetes.github.io/ingress-nginx/
-helm install --name ingress-nginx
+helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx/
+helm install --name ingress-nginx ingress-nginx/ingress-nginx
 ```
 
 ## Detect installed version:

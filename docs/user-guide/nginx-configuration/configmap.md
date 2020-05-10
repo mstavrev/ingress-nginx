@@ -78,10 +78,10 @@ The following table shows a configuration option's name, type, and the default v
 |[plugins](#plugins)|[]string| |
 |[reuse-port](#reuse-port)|bool|"true"|
 |[server-tokens](#server-tokens)|bool|"true"|
-|[ssl-ciphers](#ssl-ciphers)|string|"ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256"|
+|[ssl-ciphers](#ssl-ciphers)|string|"ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384"|
 |[ssl-ecdh-curve](#ssl-ecdh-curve)|string|"auto"|
 |[ssl-dh-param](#ssl-dh-param)|string|""|
-|[ssl-protocols](#ssl-protocols)|string|"TLSv1.2"|
+|[ssl-protocols](#ssl-protocols)|string|"TLSv1.2 TLSv1.3"|
 |[ssl-session-cache](#ssl-session-cache)|bool|"true"|
 |[ssl-session-cache-size](#ssl-session-cache-size)|string|"10m"|
 |[ssl-session-tickets](#ssl-session-tickets)|bool|"true"|
@@ -485,7 +485,7 @@ Send NGINX Server header in responses and display NGINX version in error pages. 
 Sets the [ciphers](http://nginx.org/en/docs/http/ngx_http_ssl_module.html#ssl_ciphers) list to enable. The ciphers are specified in the format understood by the OpenSSL library.
 
 The default cipher list is:
- `ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256`.
+ `ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384`.
 
 The ordering of a ciphersuite is very important because it decides which algorithms are going to be selected in priority. The recommendation above prioritizes algorithms that provide perfect [forward secrecy](https://wiki.mozilla.org/Security/Server_Side_TLS#Forward_Secrecy).
 
@@ -510,15 +510,17 @@ _References:_
 
 ## ssl-protocols
 
-Sets the [SSL protocols](http://nginx.org/en/docs/http/ngx_http_ssl_module.html#ssl_protocols) to use. The default is: `TLSv1.2`.
+Sets the [SSL protocols](http://nginx.org/en/docs/http/ngx_http_ssl_module.html#ssl_protocols) to use. The default is: `TLSv1.2 TLSv1.3`.
 
 Please check the result of the configuration using `https://ssllabs.com/ssltest/analyze.html` or `https://testssl.sh`.
 
 ## ssl-early-data
 
-Enables or disables TLS 1.3 [early data](https://tools.ietf.org/html/rfc8446#section-2.3)
+Enables or disables TLS 1.3 [early data](https://tools.ietf.org/html/rfc8446#section-2.3), also known as Zero Round Trip
+Time Resumption (0-RTT).
 
-This requires `ssl-protocols` to have `TLSv1.3` enabled.
+This requires `ssl-protocols` to have `TLSv1.3` enabled. Enable this with caution, because requests sent within early
+data are subject to [replay attacks](https://tools.ietf.org/html/rfc8470).
 
 [ssl_early_data](http://nginx.org/en/docs/http/ngx_http_ssl_module.html#ssl_early_data). The default is: `false`.
 
@@ -1066,4 +1068,3 @@ _References:_
 
 Set if proxy-ssl parameters should be applied only on locations and not on servers.
 _**default:**_ is disabled
-

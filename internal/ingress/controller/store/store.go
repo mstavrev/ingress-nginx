@@ -615,11 +615,27 @@ func New(
 		},
 	}
 
+	serviceHandler := cache.ResourceEventHandlerFuncs{
+		UpdateFunc: func(old, cur interface{}) {
+			oldSvc := old.(*corev1.Service)
+			curSvc := cur.(*corev1.Service)
+
+			if reflect.DeepEqual(oldSvc, curSvc) {
+				return
+			}
+
+			updateCh.In() <- Event{
+				Type: UpdateEvent,
+				Obj:  cur,
+			}
+		},
+	}
+
 	store.informers.Ingress.AddEventHandler(ingEventHandler)
 	store.informers.Endpoint.AddEventHandler(epEventHandler)
 	store.informers.Secret.AddEventHandler(secrEventHandler)
 	store.informers.ConfigMap.AddEventHandler(cmEventHandler)
-	store.informers.Service.AddEventHandler(cache.ResourceEventHandlerFuncs{})
+	store.informers.Service.AddEventHandler(serviceHandler)
 	store.informers.Pod.AddEventHandler(podEventHandler)
 
 	// do not wait for informers to read the configmap configuration
@@ -662,19 +678,10 @@ func (s *k8sStore) syncIngress(ing *networkingv1beta1.Ingress) {
 			if path.Path == "" {
 				copyIng.Spec.Rules[ri].HTTP.Paths[pi].Path = "/"
 			}
-
-			if path.PathType == nil {
-				copyIng.Spec.Rules[ri].HTTP.Paths[pi].PathType = &defaultPathType
-				continue
-			}
-
-			// PathType ImplementationSpecific is not supported.
-			// Set type to PathTypePrefix.
-			if *path.PathType == networkingv1beta1.PathTypeImplementationSpecific {
-				copyIng.Spec.Rules[ri].HTTP.Paths[pi].PathType = &defaultPathType
-			}
 		}
 	}
+
+	k8s.SetDefaultNGINXPathType(copyIng)
 
 	err := s.listers.IngressWithAnnotation.Update(&ingress.Ingress{
 		Ingress:           *copyIng,
@@ -963,12 +970,12 @@ func toIngress(obj interface{}) (*networkingv1beta1.Ingress, bool) {
 			return nil, false
 		}
 
-		k8s.SetDefaultPathTypeIfEmpty(ing)
+		k8s.SetDefaultNGINXPathType(ing)
 		return ing, true
 	}
 
 	if ing, ok := obj.(*networkingv1beta1.Ingress); ok {
-		k8s.SetDefaultPathTypeIfEmpty(ing)
+		k8s.SetDefaultNGINXPathType(ing)
 		return ing, true
 	}
 

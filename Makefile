@@ -27,7 +27,7 @@ endif
 SHELL=/bin/bash -o pipefail -o errexit
 
 # Use the 0.0 tag for testing, it shouldn't clobber any release builds
-TAG ?= 0.31.1
+TAG ?= 0.32.0
 
 # Use docker to run makefile tasks
 USE_DOCKER ?= true
@@ -123,6 +123,14 @@ push: .push-$(ARCH) ## Publish image for a particular arch.
 .PHONY: .push-$(ARCH)
 .push-$(ARCH):
 	docker push $(REGISTRY)/nginx-ingress-controller-${ARCH}:$(TAG)
+
+.PHONY: push-manifest
+push-manifest:
+	docker manifest create $(REGISTRY)/nginx-ingress-controller:$(TAG) \
+		$(REGISTRY)/nginx-ingress-controller-amd64:$(TAG) \
+		$(REGISTRY)/nginx-ingress-controller-arm:$(TAG) \
+		$(REGISTRY)/nginx-ingress-controller-arm64:$(TAG)
+	docker manifest push --purge $(REGISTRY)/nginx-ingress-controller:$(TAG)
 
 .PHONY: build
 build: check-go-version ## Build ingress controller, debug tool and pre-stop hook.

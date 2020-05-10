@@ -56,7 +56,6 @@ Parameter | Description | Default
 `controller.config` | nginx [ConfigMap](https://github.com/kubernetes/ingress-nginx/blob/master/docs/user-guide/nginx-configuration/configmap.md) entries | none
 `controller.configAnnotations` | annotations to be added to controller custom configuration configmap | `{}`
 `controller.hostNetwork` | If the nginx deployment / daemonset should run on the host's network namespace. Do not set this when `controller.service.externalIPs` is set and `kube-proxy` is used as there will be a port-conflict for port `80` | false
-`controller.defaultBackendService` | default 404 backend service; needed only if `defaultBackend.enabled = false` and version < 0.21.0| `""`
 `controller.dnsPolicy` | If using `hostNetwork=true`, change to `ClusterFirstWithHostNet`. See [pod's dns policy](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-s-dns-policy) for details | `ClusterFirst`
 `controller.dnsConfig` | custom pod dnsConfig. See [pod's dns config](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-s-dns-config) for details | `{}`
 `controller.reportNodeInternalIp` | If using `hostNetwork=true`, setting `reportNodeInternalIp=true`, will pass the flag `report-node-internal-ip-address` to ingress-nginx. This sets the status of all Ingress objects to the internal IP address of all nodes running the NGINX Ingress controller.
@@ -151,9 +150,9 @@ Parameter | Description | Default
 `controller.metrics.prometheusRule.additionalLabels` | Additional labels that can be used so prometheusRules will be discovered by Prometheus | `{}`
 `controller.metrics.prometheusRule.namespace` | namespace where prometheusRules resource should be created | `the same namespace as nginx ingress`
 `controller.metrics.prometheusRule.rules` | [rules](https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/) to be prometheus in YAML format, check values for an example. | `[]`
-`controller.admissionWebhooks.enabled` | Create Ingress admission webhooks. Validating webhook will check the ingress syntax. | `false`
+`controller.admissionWebhooks.enabled` | Create Ingress admission webhooks. Validating webhook will check the ingress syntax. | `true`
 `controller.admissionWebhooks.failurePolicy` | Failure policy for admission webhooks | `Fail`
-`controller.admissionWebhooks.port` | Admission webhook port | `8080`
+`controller.admissionWebhooks.port` | Admission webhook port | `8443`
 `controller.admissionWebhooks.service.annotations` | Annotations for admission webhook service | `{}`
 `controller.admissionWebhooks.service.omitClusterIP` | (Deprecated) To omit the `clusterIP` from the admission webhook service | `false`
 `controller.admissionWebhooks.service.clusterIP` | cluster IP address to assign to admission webhook service (set to `"-"` to pass an empty value) | `nil`
@@ -164,7 +163,7 @@ Parameter | Description | Default
 `controller.admissionWebhooks.service.type` | Type of admission webhook service to create | `ClusterIP`
 `controller.admissionWebhooks.patch.enabled` | If true, will use a pre and post install hooks to generate a CA and certificate to use for the prometheus operator tls proxy, and patch the created webhooks with the CA. | `true`
 `controller.admissionWebhooks.patch.image.repository` | Repository to use for the webhook integration jobs | `jettech/kube-webhook-certgen`
-`controller.admissionWebhooks.patch.image.tag` |  Tag to use for the webhook integration jobs | `v1.0.0`
+`controller.admissionWebhooks.patch.image.tag` |  Tag to use for the webhook integration jobs | `v1.2.0`
 `controller.admissionWebhooks.patch.image.pullPolicy` | Image pull policy for the webhook integration jobs | `IfNotPresent`
 `controller.admissionWebhooks.patch.priorityClassName` | Priority class for the webhook integration jobs | `""`
 `controller.admissionWebhooks.patch.podAnnotations` | Annotations for the webhook job pods | `{}`
@@ -180,7 +179,7 @@ Parameter | Description | Default
 `controller.tcp.annotations` | annotations to be added to tcp configmap | `{}`
 `controller.udp.configMapNamespace` | The udp-services-configmap namespace name | `""`
 `controller.udp.annotations` | annotations to be added to udp configmap | `{}`
-`defaultBackend.enabled` | Use default backend component | `true`
+`defaultBackend.enabled` | Use default backend component | `false`
 `defaultBackend.image.repository` | default backend container image repository | `k8s.gcr.io/defaultbackend-amd64`
 `defaultBackend.image.tag` | default backend container image tag | `1.5`
 `defaultBackend.image.pullPolicy` | default backend container image pull policy | `IfNotPresent`
@@ -314,6 +313,7 @@ controller:
 ## Ingress Admission Webhooks
 
 With nginx-ingress-controller version 0.25+, the nginx ingress controller pod exposes an endpoint that will integrate with the `validatingwebhookconfiguration` Kubernetes feature to prevent bad ingress from being added to the cluster.
+**This feature is enabled by default since 0.31.0.**
 
 With nginx-ingress-controller in 0.25.* work only with kubernetes 1.14+, 0.26 fix [this issue](https://github.com/kubernetes/ingress-nginx/pull/4521)
 
