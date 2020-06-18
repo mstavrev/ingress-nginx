@@ -24,6 +24,8 @@ import (
 	"net/http/pprof"
 	"os"
 	"os/signal"
+	"path/filepath"
+	"runtime"
 	"syscall"
 	"time"
 
@@ -77,21 +79,19 @@ func main() {
 	}
 
 	if len(conf.DefaultService) > 0 {
-		defSvcNs, defSvcName, err := k8s.ParseNameNS(conf.DefaultService)
+		err := checkService(conf.DefaultService, kubeClient)
 		if err != nil {
 			klog.Fatal(err)
 		}
 
-		_, err = kubeClient.CoreV1().Services(defSvcNs).Get(context.TODO(), defSvcName, metav1.GetOptions{})
-		if err != nil {
-			if errors.IsUnauthorized(err) || errors.IsForbidden(err) {
-				klog.Fatal("✖ The cluster seems to be running with a restrictive Authorization mode and the Ingress controller does not have the required permissions to operate normally.")
-			}
-
-			klog.Fatalf("No service with name %v found: %v", conf.DefaultService, err)
-		}
-
 		klog.Infof("Validated %v as the default backend.", conf.DefaultService)
+	}
+
+	if len(conf.PublishService) > 0 {
+		err := checkService(conf.PublishService, kubeClient)
+		if err != nil {
+			klog.Fatal(err)
+		}
 	}
 
 	if conf.Namespace != "" {
@@ -201,9 +201,20 @@ func handleSigterm(ngx *controller.NGINXController, exit exiter) {
 // the in-cluster config is missing or fails, we fallback to the default config.
 func createApiserverClient(apiserverHost, rootCAFile, kubeConfig string) (*kubernetes.Clientset, error) {
 	cfg, err := clientcmd.BuildConfigFromFlags(apiserverHost, kubeConfig)
+
 	if err != nil {
 		return nil, err
 	}
+
+	// Configure the User-Agent used for the HTTP requests made to the API server.
+	cfg.UserAgent = fmt.Sprintf(
+		"%s/%s (%s/%s) ingress-nginx/%s",
+		filepath.Base(os.Args[0]),
+		version.RELEASE,
+		runtime.GOOS,
+		runtime.GOARCH,
+		version.COMMIT,
+	)
 
 	if apiserverHost != "" && rootCAFile != "" {
 		tlsClientConfig := rest.TLSClientConfig{}
@@ -328,4 +339,26 @@ func startHTTPServer(port int, mux *http.ServeMux) {
 		IdleTimeout:       120 * time.Second,
 	}
 	klog.Fatal(server.ListenAndServe())
+}
+
+func checkService(key string, kubeClient *kubernetes.Clientset) error {
+	ns, name, err := k8s.ParseNameNS(key)
+	if err != nil {
+		return err
+	}
+
+	_, err = kubeClient.CoreV1().Services(ns).Get(context.TODO(), name, metav1.GetOptions{})
+	if err != nil {
+		if errors.IsUnauthorized(err) || errors.IsForbidden(err) {
+			return fmt.Errorf("✖ The cluster seems to be running with a restrictive Authorization mode and the Ingress controller does not have the required permissions to operate normally.")
+		}
+
+		if errors.IsNotFound(err) {
+			return fmt.Errorf("No service with name %v found in namespace %v: %v", ns, name, err)
+		}
+
+		return fmt.Errorf("Unexpected error searching service with name %v in namespace %v: %v", ns, name, err)
+	}
+
+	return nil
 }
