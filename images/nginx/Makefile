@@ -29,7 +29,7 @@ image:
 		--pull \
 		--push \
 		--progress plain \
-		--platform amd64,arm,arm64,s390x \
+		--platform amd64 \
 		--tag $(IMAGE):$(TAG) rootfs
 
 .PHONY: init-docker-buildx
