@@ -21,8 +21,8 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
+	"github.com/gavv/httpexpect/v2"
 	"github.com/onsi/ginkgo"
 	"github.com/stretchr/testify/assert"
 	core "k8s.io/api/core/v1"
@@ -173,7 +173,7 @@ var _ = framework.IngressNginxDescribe("[Service] Type ExternalName", func() {
 			GET("/get").
 			WithHeader("Host", host).
 			Expect().
-			Status(http.StatusBadGateway)
+			StatusRange(httpexpect.Status5xx)
 	})
 
 	ginkgo.It("should return 200 for service type=ExternalName using a port name", func() {
@@ -271,7 +271,7 @@ var _ = framework.IngressNginxDescribe("[Service] Type ExternalName", func() {
 		_, err = f.KubeClientSet.CoreV1().Services(f.Namespace).Update(context.Background(), svc, metav1.UpdateOptions{})
 		assert.Nil(ginkgo.GinkgoT(), err, "unexpected error updating httpbin service")
 
-		time.Sleep(5 * time.Second)
+		framework.Sleep()
 
 		body = f.HTTPTestClient().
 			GET("/get").

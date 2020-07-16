@@ -111,7 +111,7 @@ http {
         lua_ingress.init_worker()
         balancer.init_worker()
         {{ if $all.EnableMetrics }}
-        monitor.init_worker()
+        monitor.init_worker({{ $all.MonitorMaxBatchSize }})
         {{ end }}
 
         plugins.run()
@@ -279,7 +279,7 @@ http {
     {{ buildOpentracing $cfg $servers }}
 
     include /etc/nginx/mime.types;
-    default_type text/html;
+    default_type {{ $cfg.DefaultType }};
 
     {{ if $cfg.EnableBrotli }}
     brotli on;
@@ -376,6 +376,9 @@ http {
         {{ end}}
     }
 
+    {{ end }}
+
+    {{ if $cfg.UseForwardedHeaders }}
     map $http_x_forwarded_proto $full_x_forwarded_proto {
         default $http_x_forwarded_proto;
         "" $scheme;
@@ -872,7 +875,8 @@ stream {
         proxy_ssl_verify                        {{ $server.ProxySSL.Verify }};
         proxy_ssl_verify_depth                  {{ $server.ProxySSL.VerifyDepth }};
         {{ if not (empty $server.ProxySSL.ProxySSLName) }}
-        proxy_ssl_name                           {{ $server.ProxySSL.ProxySSLName }};
+        proxy_ssl_name                          {{ $server.ProxySSL.ProxySSLName }};
+        proxy_ssl_server_name                   {{ $server.ProxySSL.ProxySSLServerName }};
         {{ end }}
         {{ end }}
 
@@ -1190,13 +1194,16 @@ stream {
             {{ $proxySetHeader }} X-Real-IP              $remote_addr;
             {{ if and $all.Cfg.UseForwardedHeaders $all.Cfg.ComputeFullForwardedFor }}
             {{ $proxySetHeader }} X-Forwarded-For        $full_x_forwarded_for;
-            {{ $proxySetHeader }} X-Forwarded-Proto      $full_x_forwarded_proto;
             {{ else }}
             {{ $proxySetHeader }} X-Forwarded-For        $remote_addr;
             {{ end }}
+            {{ if $all.Cfg.UseForwardedHeaders }}
+            {{ $proxySetHeader }} X-Forwarded-Proto      $full_x_forwarded_proto;
+            {{ else }}
+            {{ $proxySetHeader }} X-Forwarded-Proto      $pass_access_scheme;
+            {{ end }}
             {{ $proxySetHeader }} X-Forwarded-Host       $best_http_host;
             {{ $proxySetHeader }} X-Forwarded-Port       $pass_port;
-            {{ $proxySetHeader }} X-Forwarded-Proto      $pass_access_scheme;
             {{ if $all.Cfg.ProxyAddOriginalURIHeader }}
             {{ $proxySetHeader }} X-Original-URI         $request_uri;
             {{ end }}
@@ -1301,7 +1308,10 @@ stream {
             {{ end }}
 
             {{ if not (empty $location.ProxySSL.ProxySSLName) }}
-            proxy_ssl_name                           {{ $location.ProxySSL.ProxySSLName }};
+            proxy_ssl_name                          {{ $location.ProxySSL.ProxySSLName }};
+            {{ end }}
+            {{ if not (empty $location.ProxySSL.ProxySSLServerName) }}
+            proxy_ssl_server_name                   {{ $location.ProxySSL.ProxySSLServerName }};
             {{ end }}
 
             {{ if not (empty $location.ProxySSL.PemFileName) }}

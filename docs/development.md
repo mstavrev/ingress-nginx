@@ -19,8 +19,6 @@ cd ingress-nginx
 
 ### Initial developer environment build
 
-Ensure docker experimental features option is enabled for [buildx](https://docs.docker.com/buildx/working-with-buildx/)
-
 ```
 $ make dev-env
 ```
@@ -29,13 +27,13 @@ $ make dev-env
 
 The nginx controller container image can be rebuilt using:
 ```
-$ ARCH=amd64 TAG=dev REGISTRY=$USER/ingress-controller make build container
+$ ARCH=amd64 TAG=dev REGISTRY=$USER/ingress-controller make build image
 ```
 
 The image will only be used by pods created after the rebuild. To delete old pods which will cause new ones to spin up:
 ```
 $ kubectl get pods -n ingress-nginx
-$ kubectl delete pod -n ingress-nginx nginx-ingress-controller-<unique-pod-id>
+$ kubectl delete pod -n ingress-nginx ingress-nginx-controller-<unique-pod-id>
 ```
 
 ## Dependencies
@@ -76,10 +74,10 @@ To find the registry simply run: `docker system info | grep Registry`
 The e2e test image can also be built through the Makefile.
 
 ```console
-$ make -C test/e2e-image image
+$ make -C test/e2e-image build
 ```
 
-Then you can load the docker image using kind: 
+Then you can load the docker image using kind:
 
 ```console
 $ kind load docker-image --name="ingress-nginx-dev" nginx-ingress-controller:e2e
@@ -97,19 +95,13 @@ $ make build
 Build a local container image
 
 ```console
-$ TAG=<tag> REGISTRY=$USER/ingress-controller make container
-```
-
-Push the container image to a remote repository
-
-```console
-$ TAG=<tag> REGISTRY=$USER/ingress-controller make push
+$ TAG=<tag> REGISTRY=$USER/ingress-controller make image
 ```
 
 ## Deploying
 
 There are several ways to deploy the ingress controller onto a cluster.
-Please check the [deployment guide](./deploy/)
+Please check the [deployment guide](./deploy/index.md)
 
 ## Testing
 

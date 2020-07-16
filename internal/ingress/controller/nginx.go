@@ -46,7 +46,7 @@ import (
 	"k8s.io/client-go/util/flowcontrol"
 	"k8s.io/klog"
 
-	adm_controler "k8s.io/ingress-nginx/internal/admission/controller"
+	adm_controller "k8s.io/ingress-nginx/internal/admission/controller"
 	"k8s.io/ingress-nginx/internal/file"
 	"k8s.io/ingress-nginx/internal/ingress"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/class"
@@ -113,7 +113,7 @@ func NewNGINXController(config *Configuration, mc metric.Collector) *NGINXContro
 	if n.cfg.ValidationWebhook != "" {
 		n.validationWebhookServer = &http.Server{
 			Addr:      config.ValidationWebhook,
-			Handler:   adm_controler.NewAdmissionControllerServer(&adm_controler.IngressAdmission{Checker: n}),
+			Handler:   adm_controller.NewAdmissionControllerServer(&adm_controller.IngressAdmission{Checker: n}),
 			TLSConfig: ssl.NewTLSListener(n.cfg.ValidationWebhookCertPath, n.cfg.ValidationWebhookKeyPath).TLSConfig(),
 		}
 	}
@@ -337,13 +337,9 @@ func (n *NGINXController) Start() {
 				return
 			}
 
-			// if the nginx master process dies the workers continue to process requests,
-			// passing checks but in case of updates in ingress no updates will be
-			// reflected in the nginx configuration which can lead to confusion and report
-			// issues because of this behavior.
-			// To avoid this issue we restart nginx in case of errors.
+			// if the nginx master process dies, the workers continue to process requests
+			// until the failure of the configured livenessProbe and restart of the pod.
 			if process.IsRespawnIfRequired(err) {
-				// release command resources
 				return
 			}
 
@@ -610,6 +606,7 @@ func (n NGINXController) generateTemplate(cfg ngx_config.Configuration, ingressC
 		EnableMetrics:            n.cfg.EnableMetrics,
 		MaxmindEditionFiles:      n.cfg.MaxmindEditionFiles,
 		HealthzURI:               nginx.HealthPath,
+		MonitorMaxBatchSize:      n.cfg.MonitorMaxBatchSize,
 		PID:                      nginx.PID,
 		StatusPath:               nginx.StatusPath,
 		StatusPort:               nginx.StatusPort,

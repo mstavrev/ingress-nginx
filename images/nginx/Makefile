@@ -12,31 +12,46 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-.DEFAULT_GOAL:=image
+.DEFAULT_GOAL:=build
 
 # set default shell
-SHELL=/bin/bash -o pipefail
+SHELL=/bin/bash -o pipefail -o errexit
+
+DIR:=$(strip $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST)))))
+INIT_BUILDX=$(DIR)/../../hack/init-buildx.sh
 
 # 0.0.0 shouldn't clobber any released builds
-TAG ?= 0.103
+TAG ?= 0.107
 REGISTRY ?= docker.io/mstavrev
 
 IMAGE = $(REGISTRY)/nginx
 
-.PHONY: image
-image:
+# required to enable buildx
+export DOCKER_CLI_EXPERIMENTAL=enabled
+
+# build with buildx
+PLATFORMS?=linux/amd64,linux/arm,linux/arm64,linux/s390x
+OUTPUT=
+PROGRESS=plain
+build: ensure-buildx
 	docker buildx build \
+		--platform=${PLATFORMS} $(OUTPUT) \
+		--progress=$(PROGRESS) \
 		--pull \
-		--push \
-		--progress plain \
-		--platform amd64 \
 		--tag $(IMAGE):$(TAG) rootfs
 
-.PHONY: init-docker-buildx
-init-docker-buildx:
-ifneq ($(shell docker buildx 2>&1 >/dev/null; echo $?),)
-	$(error "buildx not vailable. Docker 19.03 or higher is required")
+# push the cross built image
+push: OUTPUT=--push
+push: build
+
+# enable buildx
+ensure-buildx:
+# this is required for cloudbuild
+ifeq ("$(wildcard $(INIT_BUILDX))","")
+	@curl -sSL https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/hack/init-buildx.sh | bash
+else
+	@exec $(INIT_BUILDX)
 endif
-	docker run --rm --privileged docker/binfmt:a7996909642ee92942dcd6cff44b9b95f08dad64
-	docker buildx create --name ingress-nginx --use || true
-	docker buildx inspect --bootstrap
+	@echo "done"
+
+.PHONY: build push ensure-buildx

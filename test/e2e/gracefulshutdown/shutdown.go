@@ -37,13 +37,10 @@ var _ = framework.IngressNginxDescribe("[Shutdown] ingress controller", func() {
 
 	ginkgo.BeforeEach(func() {
 		f.UpdateNginxConfigMapData("worker-shutdown-timeout", "600s")
-
 		f.NewSlowEchoDeployment()
 	})
 
 	ginkgo.It("should shutdown in less than 60 secons without pending connections", func() {
-		defer ginkgo.GinkgoRecover()
-
 		f.EnsureIngress(framework.NewSingleIngress(host, "/", host, f.Namespace, framework.SlowEchoService, 80, nil))
 
 		f.WaitForNginxServer(host,
@@ -64,11 +61,7 @@ var _ = framework.IngressNginxDescribe("[Shutdown] ingress controller", func() {
 		assert.LessOrEqual(ginkgo.GinkgoT(), int(time.Since(startTime).Seconds()), 60, "waiting shutdown")
 	})
 
-	type asyncResult struct {
-		status int
-	}
-
-	ginkgo.It("should shutdown after waiting 60 seconds for pending connections to be closed", func() {
+	ginkgo.It("should shutdown after waiting 60 seconds for pending connections to be closed", func(done ginkgo.Done) {
 		defer ginkgo.GinkgoRecover()
 
 		err := framework.UpdateDeployment(f.KubeClientSet, f.Namespace, "nginx-ingress-controller", 1,
@@ -78,7 +71,6 @@ var _ = framework.IngressNginxDescribe("[Shutdown] ingress controller", func() {
 				_, err := f.KubeClientSet.AppsV1().Deployments(f.Namespace).Update(context.TODO(), deployment, metav1.UpdateOptions{})
 				return err
 			})
-
 		assert.Nil(ginkgo.GinkgoT(), err)
 
 		annotations := map[string]string{
@@ -92,11 +84,10 @@ var _ = framework.IngressNginxDescribe("[Shutdown] ingress controller", func() {
 				return strings.Contains(server, "server_name shutdown")
 			})
 
-		result := make(chan *asyncResult)
-
 		startTime := time.Now()
 
-		go func(host string, c chan *asyncResult) {
+		result := make(chan int)
+		go func(host string, c chan int) {
 			defer ginkgo.GinkgoRecover()
 
 			resp := f.HTTPTestClient().
@@ -105,34 +96,17 @@ var _ = framework.IngressNginxDescribe("[Shutdown] ingress controller", func() {
 				Expect().
 				Raw()
 
-			code := 0
-			if resp != nil {
-				code = resp.StatusCode
-			}
-
-			c <- &asyncResult{code}
+			c <- resp.StatusCode
 		}(host, result)
-
-		time.Sleep(5 * time.Second)
 
 		f.ScaleDeploymentToZero("nginx-ingress-controller")
 
-		ticker := time.NewTicker(time.Second * 10)
+		assert.Equal(ginkgo.GinkgoT(), <-result, http.StatusOK, "expecting a valid response from HTTP request")
+		assert.GreaterOrEqual(ginkgo.GinkgoT(), int(time.Since(startTime).Seconds()), 60, "waiting shutdown")
+		close(done)
+	}, 100)
 
-		for {
-			select {
-			case res := <-result:
-				assert.Equal(ginkgo.GinkgoT(), res.status, http.StatusOK, "expecting a valid response from HTTP request")
-				assert.GreaterOrEqual(ginkgo.GinkgoT(), int(time.Since(startTime).Seconds()), 60, "waiting shutdown")
-				ticker.Stop()
-				return
-			case <-ticker.C:
-				framework.Logf("waiting for request completion after shutdown")
-			}
-		}
-	})
-
-	ginkgo.It("should shutdown after waiting 150 seconds for pending connections to be closed", func() {
+	ginkgo.It("should shutdown after waiting 150 seconds for pending connections to be closed", func(done ginkgo.Done) {
 		err := framework.UpdateDeployment(f.KubeClientSet, f.Namespace, "nginx-ingress-controller", 1,
 			func(deployment *appsv1.Deployment) error {
 				grace := int64(3600)
@@ -153,11 +127,10 @@ var _ = framework.IngressNginxDescribe("[Shutdown] ingress controller", func() {
 				return strings.Contains(server, "server_name shutdown")
 			})
 
-		result := make(chan *asyncResult)
-
 		startTime := time.Now()
 
-		go func(host string, c chan *asyncResult) {
+		result := make(chan int)
+		go func(host string, c chan int) {
 			defer ginkgo.GinkgoRecover()
 
 			resp := f.HTTPTestClient().
@@ -166,30 +139,13 @@ var _ = framework.IngressNginxDescribe("[Shutdown] ingress controller", func() {
 				Expect().
 				Raw()
 
-			code := 0
-			if resp != nil {
-				code = resp.StatusCode
-			}
-
-			c <- &asyncResult{code}
+			c <- resp.StatusCode
 		}(host, result)
-
-		time.Sleep(5 * time.Second)
 
 		f.ScaleDeploymentToZero("nginx-ingress-controller")
 
-		ticker := time.NewTicker(time.Second * 10)
-
-		for {
-			select {
-			case res := <-result:
-				assert.Equal(ginkgo.GinkgoT(), res.status, http.StatusOK, "expecting a valid response from HTTP request")
-				assert.GreaterOrEqual(ginkgo.GinkgoT(), int(time.Since(startTime).Seconds()), 150, "waiting shutdown")
-				ticker.Stop()
-				return
-			case <-ticker.C:
-				framework.Logf("waiting for request completion after shutdown")
-			}
-		}
-	})
+		assert.Equal(ginkgo.GinkgoT(), <-result, http.StatusOK, "expecting a valid response from HTTP request")
+		assert.GreaterOrEqual(ginkgo.GinkgoT(), int(time.Since(startTime).Seconds()), 150, "waiting shutdown")
+		close(done)
+	}, 200)
 })

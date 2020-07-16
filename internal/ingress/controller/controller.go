@@ -101,6 +101,8 @@ type Configuration struct {
 
 	GlobalExternalAuth  *ngx_config.GlobalExternalAuth
 	MaxmindEditionFiles []string
+
+	MonitorMaxBatchSize int
 }
 
 // GetPublishService returns the Service used to set the load-balancer status of Ingresses.
@@ -639,6 +641,11 @@ func (n *NGINXController) getBackendServers(ingresses []*ingress.Ingress) ([]*in
 			for _, location := range server.Locations {
 				// use default backend
 				if !shouldCreateUpstreamForLocationDefaultBackend(upstream, location) {
+					continue
+				}
+
+				if len(location.DefaultBackend.Spec.Ports) == 0 {
+					klog.Errorf("Custom default backend service %v/%v has no ports. Ignoring", location.DefaultBackend.Namespace, location.DefaultBackend.Name)
 					continue
 				}
 

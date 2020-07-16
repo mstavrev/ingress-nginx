@@ -1,4 +1,4 @@
-FROM quay.io/kubernetes-ingress-controller/e2e:v05312020-d250b97b4 AS BASE
+FROM us.gcr.io/k8s-artifacts-prod/ingress-nginx/e2e-test-runner@sha256:bf31d6f13984ef0818312f9247780e234a6d50322e362217dabe4b3299f202ef AS BASE
 
 FROM alpine:3.12
 

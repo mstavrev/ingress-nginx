@@ -19,9 +19,9 @@ package defaultbackend
 import (
 	"net/http"
 
+	"github.com/gavv/httpexpect/v2"
 	"github.com/onsi/ginkgo"
 	"github.com/stretchr/testify/assert"
-	"gopkg.in/gavv/httpexpect.v2"
 
 	"k8s.io/ingress-nginx/test/e2e/framework"
 )
@@ -58,6 +58,8 @@ var _ = framework.IngressNginxDescribe("[Default Backend]", func() {
 			{"basic HTTPS POST request to host foo.bar.com and path / should return 404", " foo.bar.com", framework.HTTPS, "POST", "/", http.StatusNotFound},
 			{"basic HTTPS POST request to host foo.bar.com and path /demo should return 404", " foo.bar.com", framework.HTTPS, "POST", "/demo", http.StatusNotFound},
 		}
+
+		framework.Sleep()
 
 		for _, test := range testCases {
 			ginkgo.By(test.Name)

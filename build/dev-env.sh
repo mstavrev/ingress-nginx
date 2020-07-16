@@ -27,7 +27,7 @@ DIR=$(cd $(dirname "${BASH_SOURCE}") && pwd -P)
 export TAG=1.0.0-dev
 export REGISTRY=${REGISTRY:-ingress-controller}
 
-DEV_IMAGE=${REGISTRY}/nginx-ingress-controller:${TAG}
+DEV_IMAGE=${REGISTRY}/controller:${TAG}
 
 if ! command -v kind &> /dev/null; then
   echo "kind is not installed"
@@ -40,13 +40,14 @@ if ! command -v kubectl &> /dev/null; then
   exit 1
 fi
 
-if ! docker buildx version &> /dev/null; then
-  echo "Make sure you have Docker 19.03 or higher and experimental features enabled"
+if ! command -v helm &> /dev/null; then
+  echo "Please install helm"
   exit 1
 fi
 
-if ! command -v helm &> /dev/null; then
-  echo "Please install helm"
+HELM_VERSION=$(helm version 2>&1 | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+') || true
+if [[ ${HELM_VERSION} < "v3.0.0" ]]; then
+  echo "Please upgrade helm to v3.0.0 or higher"
   exit 1
 fi
 
@@ -58,11 +59,9 @@ fi
 
 echo "[dev-env] building image"
 make build image
-docker tag "${REGISTRY}/nginx-ingress-controller:${TAG}" "${DEV_IMAGE}"
+docker tag "${REGISTRY}/controller:${TAG}" "${DEV_IMAGE}"
 
-export K8S_VERSION=${K8S_VERSION:-v1.18.0@sha256:0e20578828edd939d25eb98496a685c76c98d54084932f76069f886ec315d694}
-
-export DOCKER_CLI_EXPERIMENTAL=enabled
+export K8S_VERSION=${K8S_VERSION:-v1.18.4@sha256:d8ff5fc405fc679dd3dd0cccc01543ba4942ed90823817d2e9e2c474a5343c4f}
 
 KIND_CLUSTER_NAME="ingress-nginx-dev"
 
@@ -101,8 +100,9 @@ kubectl create namespace ingress-nginx &> /dev/null || true
 cat << EOF | helm template ingress-nginx ${DIR}/../charts/ingress-nginx --namespace=ingress-nginx --values - | kubectl apply -n ingress-nginx -f -
 controller:
   image:
-    repository: ${REGISTRY}/nginx-ingress-controller
+    repository: ${REGISTRY}/controller
     tag: ${TAG}
+    digest:
   config:
     worker-processes: "1"
   podLabels:

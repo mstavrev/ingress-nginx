@@ -37,15 +37,13 @@ cleanup() {
 
 trap cleanup EXIT
 
-if ! command -v parallel &> /dev/null; then
-  if [[ "$OSTYPE" == "linux-gnu" ]]; then
-    echo "Parallel is not installed. Use the package manager to install it"
-  elif [[ "$OSTYPE" == "darwin"* ]]; then
-    echo "Parallel is not installed. Install it running brew install parallel"
-  fi
+export KIND_CLUSTER_NAME=${KIND_CLUSTER_NAME:-ingress-nginx-dev}
 
-  exit 1
-fi
+# Disable execution if running as a Prow job
+#if [[ ! -z ${PROW_JOB_ID:-} ]]; then
+#  echo "skipping execution..."
+#  exit 0
+#fi
 
 if ! command -v kind --version &> /dev/null; then
   echo "kind is not installed. Use the package manager or visit the official site https://kind.sigs.k8s.io/"
@@ -56,77 +54,51 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 # Use 1.0.0-dev to make sure we use the latest configuration in the helm template
 export TAG=1.0.0-dev
-export ARCH=amd64
+export ARCH=${ARCH:-amd64}
 export REGISTRY=ingress-controller
-
-export K8S_VERSION=${K8S_VERSION:-v1.18.0@sha256:0e20578828edd939d25eb98496a685c76c98d54084932f76069f886ec315d694}
 
 export DOCKER_CLI_EXPERIMENTAL=enabled
 
-export KIND_CLUSTER_NAME=${KIND_CLUSTER_NAME:-ingress-nginx-dev}
+export KUBECONFIG="${KUBECONFIG:-$HOME/.kube/kind-config-$KIND_CLUSTER_NAME}"
 
-echo "[dev-env] creating Kubernetes cluster with kind"
+if [ "${SKIP_CLUSTER_CREATION:-false}" = "false" ]; then
+  echo "[dev-env] creating Kubernetes cluster with kind"
 
-export KUBECONFIG="${HOME}/.kube/kind-config-${KIND_CLUSTER_NAME}"
-kind create cluster \
-  --verbosity=${KIND_LOG_LEVEL} \
-  --name ${KIND_CLUSTER_NAME} \
-  --config ${DIR}/kind.yaml \
-  --retain \
-  --image "kindest/node:${K8S_VERSION}"
+  export K8S_VERSION=${K8S_VERSION:-v1.18.4@sha256:d8ff5fc405fc679dd3dd0cccc01543ba4942ed90823817d2e9e2c474a5343c4f}
 
-echo "Kubernetes cluster:"
-kubectl get nodes -o wide
+  kind create cluster \
+    --verbosity=${KIND_LOG_LEVEL} \
+    --name ${KIND_CLUSTER_NAME} \
+    --config ${DIR}/kind.yaml \
+    --retain \
+    --image "kindest/node:${K8S_VERSION}"
 
-echo "[dev-env] building image"
-export EXIT_CODE=-1
-echo "
-make -C ${DIR}/../../ clean-image build image
-make -C ${DIR}/../e2e-image image
-make -C ${DIR}/../../images/fastcgi-helloserver/ GO111MODULE=\"on\" build image
-make -C ${DIR}/../../images/httpbin/ image
-make -C ${DIR}/../../images/echo/ image
-make -C ${DIR}/../../images/cfssl/ image
-" | parallel --joblog /tmp/log {} || EXIT_CODE=$?
-if [ ${EXIT_CODE} -eq 0 ] || [ ${EXIT_CODE} -eq -1 ];
-then
-  echo "Image builds were ok! Log:"
-  cat /tmp/log
-  unset EXIT_CODE
-else
-  echo "Image builds were not ok! Log:"
-  cat /tmp/log
-  exit 1
+  echo "Kubernetes cluster:"
+  kubectl get nodes -o wide
 fi
 
-# Preload images used in e2e tests
-docker pull moul/grpcbin
-docker pull quay.io/kubernetes-ingress-controller/nginx:e3c49c52f4b74fe47ad65d6f3266a02e8b6b622f
+if [ "${SKIP_IMAGE_CREATION:-false}" = "false" ]; then
+  if ! command -v ginkgo &> /dev/null; then
+    go get github.com/onsi/ginkgo/ginkgo
+  fi
 
+  echo "[dev-env] building image"
+  make -C ${DIR}/../../ clean-image build image
+  make -C ${DIR}/../e2e-image image
+fi
+
+#make -C ${DIR}/../../images/fastcgi-helloserver/ build image
+#make -C ${DIR}/../../images/echo/ image
+
+# Preload images used in e2e tests
 KIND_WORKERS=$(kind get nodes --name="${KIND_CLUSTER_NAME}" | grep worker | awk '{printf (NR>1?",":"") $1}')
 
 echo "[dev-env] copying docker images to cluster..."
-export EXIT_CODE=-1
-echo "
+
 kind load docker-image --name="${KIND_CLUSTER_NAME}" --nodes=${KIND_WORKERS} nginx-ingress-controller:e2e
-kind load docker-image --name="${KIND_CLUSTER_NAME}" --nodes=${KIND_WORKERS} ${REGISTRY}/nginx-ingress-controller:${TAG}
-kind load docker-image --name="${KIND_CLUSTER_NAME}" --nodes=${KIND_WORKERS} ${REGISTRY}/fastcgi-helloserver:${TAG}
-kind load docker-image --name="${KIND_CLUSTER_NAME}" --nodes=${KIND_WORKERS} ${REGISTRY}/httpbin:${TAG}
-kind load docker-image --name="${KIND_CLUSTER_NAME}" --nodes=${KIND_WORKERS} ${REGISTRY}/echo:${TAG}
-kind load docker-image --name="${KIND_CLUSTER_NAME}" --nodes=${KIND_WORKERS} quay.io/kubernetes-ingress-controller/nginx:e3c49c52f4b74fe47ad65d6f3266a02e8b6b622f
-kind load docker-image --name="${KIND_CLUSTER_NAME}" --nodes=${KIND_WORKERS} moul/grpcbin
-kind load docker-image --name="${KIND_CLUSTER_NAME}" --nodes=${KIND_WORKERS} ${REGISTRY}/cfssl:${TAG}
-" | parallel --joblog /tmp/log {} || EXIT_CODE=$?
-if [ ${EXIT_CODE} -eq 0 ] || [ ${EXIT_CODE} -eq -1 ];
-then
-  echo "Image loads were ok! Log:"
-  cat /tmp/log
-  unset EXIT_CODE
-else
-  echo "Image loads were not ok! Log:"
-  cat /tmp/log
-  exit
-fi
+kind load docker-image --name="${KIND_CLUSTER_NAME}" --nodes=${KIND_WORKERS} ${REGISTRY}/controller:${TAG}
+#kind load docker-image --name="${KIND_CLUSTER_NAME}" --nodes=${KIND_WORKERS} ${REGISTRY}/fastcgi-helloserver:${TAG}
+#kind load docker-image --name="${KIND_CLUSTER_NAME}" --nodes=${KIND_WORKERS} ${REGISTRY}/echo:${TAG}
 
 echo "[dev-env] running e2e tests..."
 make -C ${DIR}/../../ e2e-test

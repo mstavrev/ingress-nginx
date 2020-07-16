@@ -19,7 +19,7 @@ data:
     This means that we want a value with boolean values we need to quote the values, like "true" or "false".
     Same for numbers, like "100".
 
-    "Slice" types (defined below as `[]string` or `[]int` can be provided as a comma-delimited string.
+    "Slice" types (defined below as `[]string` or `[]int`) can be provided as a comma-delimited string.
 
 ## Configuration options
 
@@ -183,6 +183,7 @@ The following table shows a configuration option's name, type, and the default v
 |[block-user-agents](#block-user-agents)|[]string|""|
 |[block-referers](#block-referers)|[]string|""|
 |[proxy-ssl-location-only](#proxy-ssl-location-only)|bool|"false"|
+|[default-type](#default-type)|string|"text/html"|
 
 ## add-headers
 
@@ -443,7 +444,7 @@ Sets the bucket size for the [map variables hash tables](http://nginx.org/en/doc
 
 ## proxy-real-ip-cidr
 
-If use-proxy-protocol is enabled, proxy-real-ip-cidr defines the default the IP/network address of your external load balancer.
+If use-forwarded-headers or use-proxy-protocol is enabled, proxy-real-ip-cidr defines the default the IP/network address of your external load balancer.
 
 ## proxy-set-headers
 
@@ -506,6 +507,8 @@ The default cipher list is:
 The ordering of a ciphersuite is very important because it decides which algorithms are going to be selected in priority. The recommendation above prioritizes algorithms that provide perfect [forward secrecy](https://wiki.mozilla.org/Security/Server_Side_TLS#Forward_Secrecy).
 
 Please check the [Mozilla SSL Configuration Generator](https://mozilla.github.io/server-side-tls/ssl-config-generator/).
+
+__Note:__ ssl_prefer_server_ciphers directive will be enabled by default for http context.
 
 ## ssl-ecdh-curve
 
@@ -1084,3 +1087,11 @@ _References:_
 
 Set if proxy-ssl parameters should be applied only on locations and not on servers.
 _**default:**_ is disabled
+
+## default-type
+
+Sets the default MIME type of a response.
+_**default:**_ text/html
+
+_References:_
+[http://nginx.org/en/docs/http/ngx_http_core_module.html#default_type](http://nginx.org/en/docs/http/ngx_http_core_module.html#default_type)

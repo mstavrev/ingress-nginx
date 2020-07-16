@@ -17,7 +17,7 @@ limitations under the License.
 package framework
 
 import (
-	context2 "context"
+	"context"
 	"fmt"
 	"os"
 	"time"
@@ -35,10 +35,10 @@ import (
 
 const (
 	// Poll how often to poll for conditions
-	Poll = 2 * time.Second
+	Poll = 1 * time.Second
 
 	// DefaultTimeout time to wait for operations to complete
-	DefaultTimeout = 90 * time.Second
+	DefaultTimeout = 180 * time.Second
 )
 
 func nowStamp() string {
@@ -94,7 +94,7 @@ func CreateKubeNamespace(baseName string, c kubernetes.Interface) (string, error
 	var err error
 
 	err = wait.PollImmediate(Poll, DefaultTimeout, func() (bool, error) {
-		got, err = c.CoreV1().Namespaces().Create(context2.TODO(), ns, metav1.CreateOptions{})
+		got, err = c.CoreV1().Namespaces().Create(context.TODO(), ns, metav1.CreateOptions{})
 		if err != nil {
 			Logf("Unexpected error while creating namespace: %v", err)
 			return false, nil
@@ -107,11 +107,11 @@ func CreateKubeNamespace(baseName string, c kubernetes.Interface) (string, error
 	return got.Name, nil
 }
 
-// DeleteKubeNamespace deletes a namespace and all the objects inside
-func DeleteKubeNamespace(c kubernetes.Interface, namespace string) error {
+// deleteKubeNamespace deletes a namespace and all the objects inside
+func deleteKubeNamespace(c kubernetes.Interface, namespace string) error {
 	grace := int64(0)
 	pb := metav1.DeletePropagationBackground
-	return c.CoreV1().Namespaces().Delete(context2.TODO(), namespace, metav1.DeleteOptions{
+	return c.CoreV1().Namespaces().Delete(context.TODO(), namespace, metav1.DeleteOptions{
 		GracePeriodSeconds: &grace,
 		PropagationPolicy:  &pb,
 	})
@@ -124,7 +124,7 @@ func WaitForKubeNamespaceNotExist(c kubernetes.Interface, namespace string) erro
 
 func namespaceNotExist(c kubernetes.Interface, namespace string) wait.ConditionFunc {
 	return func() (bool, error) {
-		_, err := c.CoreV1().Namespaces().Get(context2.TODO(), namespace, metav1.GetOptions{})
+		_, err := c.CoreV1().Namespaces().Get(context.TODO(), namespace, metav1.GetOptions{})
 		if apierrors.IsNotFound(err) {
 			return true, nil
 		}
@@ -142,7 +142,7 @@ func WaitForNoPodsInNamespace(c kubernetes.Interface, namespace string) error {
 
 func noPodsInNamespace(c kubernetes.Interface, namespace string) wait.ConditionFunc {
 	return func() (bool, error) {
-		items, err := c.CoreV1().Pods(namespace).List(context2.TODO(), metav1.ListOptions{})
+		items, err := c.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
 		if apierrors.IsNotFound(err) {
 			return true, nil
 		}
@@ -177,7 +177,7 @@ func WaitForSecretInNamespace(c kubernetes.Interface, namespace, name string) er
 
 func secretInNamespace(c kubernetes.Interface, namespace, name string) wait.ConditionFunc {
 	return func() (bool, error) {
-		s, err := c.CoreV1().Secrets(namespace).Get(context2.TODO(), name, metav1.GetOptions{})
+		s, err := c.CoreV1().Secrets(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 		if apierrors.IsNotFound(err) {
 			return false, nil
 		}
@@ -223,7 +223,7 @@ func WaitForNoIngressInNamespace(c kubernetes.Interface, namespace, name string)
 
 func noIngressInNamespace(c kubernetes.Interface, namespace, name string) wait.ConditionFunc {
 	return func() (bool, error) {
-		ing, err := c.NetworkingV1beta1().Ingresses(namespace).Get(context2.TODO(), name, metav1.GetOptions{})
+		ing, err := c.NetworkingV1beta1().Ingresses(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 		if apierrors.IsNotFound(err) {
 			return true, nil
 		}
@@ -245,7 +245,7 @@ func WaitForIngressInNamespace(c kubernetes.Interface, namespace, name string) e
 
 func ingressInNamespace(c kubernetes.Interface, namespace, name string) wait.ConditionFunc {
 	return func() (bool, error) {
-		ing, err := c.NetworkingV1beta1().Ingresses(namespace).Get(context2.TODO(), name, metav1.GetOptions{})
+		ing, err := c.NetworkingV1beta1().Ingresses(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 		if apierrors.IsNotFound(err) {
 			return false, nil
 		}
@@ -262,7 +262,7 @@ func ingressInNamespace(c kubernetes.Interface, namespace, name string) wait.Con
 
 func podRunning(c kubernetes.Interface, podName, namespace string) wait.ConditionFunc {
 	return func() (bool, error) {
-		pod, err := c.CoreV1().Pods(namespace).Get(context2.TODO(), podName, metav1.GetOptions{})
+		pod, err := c.CoreV1().Pods(namespace).Get(context.TODO(), podName, metav1.GetOptions{})
 		if err != nil {
 			return false, nil
 		}

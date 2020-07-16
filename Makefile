@@ -27,24 +27,13 @@ endif
 SHELL=/bin/bash -o pipefail -o errexit
 
 # Use the 0.0 tag for testing, it shouldn't clobber any release builds
-TAG ?= 0.33.0
-
-# Use docker to run makefile tasks
-USE_DOCKER ?= true
-
-# Disable run docker tasks if running in prow.
-# only checks the existence of the variable, not the value.
-ifdef DIND_TASKS
-USE_DOCKER=false
-endif
+TAG ?= $(shell cat TAG)
 
 # e2e settings
 # Allow limiting the scope of the e2e tests. By default run everything
 FOCUS ?= .*
 # number of parallel test
-E2E_NODES ?= 15
-# slow test only if takes > 50s
-SLOW_E2E_THRESHOLD ?= 50
+E2E_NODES ?= 8
 # run e2e test suite with tests that check for memory leaks? (default is false)
 E2E_CHECK_LEAKS ?=
 
@@ -65,9 +54,6 @@ BASE_IMAGE ?= docker.io/mstavrev/nginx
 
 GOARCH=$(ARCH)
 
-# use vendor directory instead of go modules https://github.com/golang/go/wiki/Modules
-GO111MODULE=off
-
 help:  ## Display this help
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
@@ -79,16 +65,15 @@ image: clean-image ## Build image for a particular arch.
 		--build-arg BASE_IMAGE="$(BASE_IMAGE)" \
 		--build-arg VERSION="$(TAG)" \
 		--build-arg TARGETARCH="$(ARCH)" \
-		-t $(REGISTRY)/nginx-ingress-controller:$(TAG) rootfs
+		-t $(REGISTRY)/controller:$(TAG) rootfs
 
 .PHONY: clean-image
 clean-image: ## Removes local image
-	echo "removing old image $(BASE_IMAGE):$(TAG)"
-	@docker rmi -f $(BASE_IMAGE):$(TAG) || true
+	echo "removing old image $(REGISTRY)/controller:$(TAG)"
+	@docker rmi -f $(REGISTRY)/controller:$(TAG) || true
 
 .PHONY: build
-build: check-go-version ## Build ingress controller, debug tool and pre-stop hook.
-ifeq ($(USE_DOCKER), true)
+build:  ## Build ingress controller, debug tool and pre-stop hook.
 	@build/run-in-docker.sh \
 		PKG=$(PKG) \
 		ARCH=$(ARCH) \
@@ -97,13 +82,9 @@ ifeq ($(USE_DOCKER), true)
 		TAG=$(TAG) \
 		GOBUILD_FLAGS=$(GOBUILD_FLAGS) \
 		build/build.sh
-else
-	@build/build.sh
-endif
 
 .PHONY: build-plugin
-build-plugin: check-go-version ## Build ingress-nginx krew plugin.
-ifeq ($(USE_DOCKER), true)
+build-plugin:  ## Build ingress-nginx krew plugin.
 	@build/run-in-docker.sh \
 		PKG=$(PKG) \
 		ARCH=$(ARCH) \
@@ -112,9 +93,6 @@ ifeq ($(USE_DOCKER), true)
 		TAG=$(TAG) \
 		GOBUILD_FLAGS=$(GOBUILD_FLAGS) \
 		build/build-plugin.sh
-else
-	@build/build-plugin.sh
-endif
 
 .PHONY: clean
 clean: ## Remove .gocache directory.
@@ -122,16 +100,11 @@ clean: ## Remove .gocache directory.
 
 .PHONY: static-check
 static-check: ## Run verification script for boilerplate, codegen, gofmt, golint, lualint and chart-lint.
-ifeq ($(USE_DOCKER), true)
 	@build/run-in-docker.sh \
 		hack/verify-all.sh
-else
-	@hack/verify-all.sh
-endif
 
 .PHONY: test
-test: check-go-version ## Run go unit tests.
-ifeq ($(USE_DOCKER), true)
+test:  ## Run go unit tests.
 	@build/run-in-docker.sh \
 		PKG=$(PKG) \
 		ARCH=$(ARCH) \
@@ -140,32 +113,21 @@ ifeq ($(USE_DOCKER), true)
 		TAG=$(TAG) \
 		GOBUILD_FLAGS=$(GOBUILD_FLAGS) \
 		build/test.sh
-else
-	@build/test.sh
-endif
 
 .PHONY: lua-test
 lua-test: ## Run lua unit tests.
-ifeq ($(USE_DOCKER), true)
 	@build/run-in-docker.sh \
 		BUSTED_ARGS=$(BUSTED_ARGS) \
 		build/test-lua.sh
-else
-	@build/test-lua.sh
-endif
 
 .PHONY: e2e-test
-e2e-test: check-go-version ## Run e2e tests (expects access to a working Kubernetes cluster).
+e2e-test:  ## Run e2e tests (expects access to a working Kubernetes cluster).
 	@build/run-e2e-suite.sh
 
 .PHONY: e2e-test-binary
-e2e-test-binary: check-go-version ## Build ginkgo binary for e2e tests.
-ifeq ($(USE_DOCKER), true)
+e2e-test-binary:  ## Build binary for e2e tests.
 	@build/run-in-docker.sh \
 		ginkgo build ./test/e2e
-else
-	@ginkgo build ./test/e2e
-endif
 
 .PHONY: print-e2e-suite
 print-e2e-suite: e2e-test-binary ## Prints information about the suite of e2e tests.
@@ -173,7 +135,7 @@ print-e2e-suite: e2e-test-binary ## Prints information about the suite of e2e te
 		hack/print-e2e-suite.sh
 
 .PHONY: cover
-cover: check-go-version ## Run go coverage unit tests.
+cover:  ## Run go coverage unit tests.
 	@build/cover.sh
 	echo "Uploading coverage results..."
 	@curl -s https://codecov.io/bash | bash
@@ -189,14 +151,8 @@ check_dead_links: ## Check if the documentation contains dead links.
 	  --allow-dupe \
 	  --allow-redirect $(shell find $$PWD -mindepth 1 -name "*.md" -printf '%P\n' | grep -v vendor | grep -v Changelog.md)
 
-.PHONY: dep-ensure
-dep-ensure: check-go-version ## Update and vendo go dependencies.
-	GO111MODULE=on go mod tidy -v
-	find vendor -name '*_test.go' -delete
-	GO111MODULE=on go mod vendor
-
 .PHONY: dev-env
-dev-env: check-go-version ## Starts a local Kubernetes cluster using kind, building and deploying the ingress controller.
+dev-env:  ## Starts a local Kubernetes cluster using kind, building and deploying the ingress controller.
 	@build/dev-env.sh
 
 .PHONY: dev-env-stop
@@ -211,7 +167,7 @@ live-docs: ## Build and launch a local copy of the documentation website in http
 		squidfunk/mkdocs-material:5.2.3
 
 .PHONY: misspell
-misspell: check-go-version ## Check for spelling errors.
+misspell:  ## Check for spelling errors.
 	@go get github.com/client9/misspell/cmd/misspell
 	misspell \
 		-locale US \
@@ -219,7 +175,7 @@ misspell: check-go-version ## Check for spelling errors.
 		cmd/* internal/* deploy/* docs/* design/* test/* README.md
 
 .PHONY: kind-e2e-test
-kind-e2e-test: check-go-version ## Run e2e tests using kind.
+kind-e2e-test:  ## Run e2e tests using kind.
 	@test/e2e/run.sh
 
 .PHONY: kind-e2e-chart-tests
@@ -230,25 +186,9 @@ kind-e2e-chart-tests: ## Run helm chart e2e tests
 run-ingress-controller: ## Run the ingress controller locally using a kubectl proxy connection.
 	@build/run-ingress-controller.sh
 
-.PHONY: check-go-version
-check-go-version:
-ifeq ($(USE_DOCKER), true)
-	@build/run-in-docker.sh \
-		hack/check-go-version.sh
-else
-	@hack/check-go-version.sh
-endif
-
-.PHONY: init-docker-buildx
-init-docker-buildx:
-ifeq ($(DIND_TASKS),)
-ifneq ($(shell docker buildx 2>&1 >/dev/null; echo $?),)
-	$(error "buildx not available. Docker 19.03 or higher is required with experimental features enabled")
-endif
-	docker run --rm --privileged docker/binfmt:a7996909642ee92942dcd6cff44b9b95f08dad64
-	docker buildx create --name ingress-nginx --use || true
-	docker buildx inspect --bootstrap
-endif
+.PHONY: ensure-buildx
+ensure-buildx:
+	./hack/init-buildx.sh
 
 .PHONY: show-version
 show-version:
@@ -261,7 +201,7 @@ SPACE := $(EMPTY) $(EMPTY)
 COMMA := ,
 
 .PHONY: release # Build a multi-arch docker image
-release: init-docker-buildx clean
+release: ensure-buildx clean
 	echo "Building binaries..."
 	$(foreach PLATFORM,$(PLATFORMS), echo -n "$(PLATFORM)..."; ARCH=$(PLATFORM) make build;)
 
@@ -273,4 +213,4 @@ release: init-docker-buildx clean
 		--platform $(subst $(SPACE),$(COMMA),$(PLATFORMS)) \
 		--build-arg BASE_IMAGE="$(BASE_IMAGE)" \
 		--build-arg VERSION="$(TAG)" \
-		-t $(REGISTRY)/nginx-ingress-controller:$(TAG) rootfs
+		-t $(REGISTRY)/controller:$(TAG) rootfs

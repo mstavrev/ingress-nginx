@@ -55,14 +55,14 @@ spec:
     {{- if .Values.controller.sysctls }}
         sysctls:
     {{- range $sysctl, $value := .Values.controller.sysctls }}
-        - name: {{ $sysctl }}
-          value: {{ $value }}
+        - name: {{ $sysctl | quote }}
+          value: {{ $value | quote }}
     {{- end }}
     {{- end }}
       containers:
         - name: controller
           {{- with .Values.controller.image }}
-          image: "{{.repository}}{{- if (.digest) -}} @{{.digest}} {{- else -}} :{{ .tag }} {{- end -}}"
+          image: "{{.repository}}:{{ .tag }}{{- if (.digest) -}} @{{.digest}} {{- end -}}"
           {{- end }}
           imagePullPolicy: {{ .Values.controller.image.pullPolicy }}
         {{- if .Values.controller.lifecycle }}
