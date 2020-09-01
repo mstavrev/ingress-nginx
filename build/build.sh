@@ -26,7 +26,7 @@ declare -a mandatory
 mandatory=(
   PKG
   ARCH
-  GIT_COMMIT
+  COMMIT_SHA
   REPO_INFO
   TAG
 )
@@ -47,22 +47,22 @@ export CGO_ENABLED=0
 export GOARCH=${ARCH}
 
 go build \
-  -ldflags "-s -w \
+  -trimpath -ldflags="-buildid= -w -s \
     -X ${PKG}/version.RELEASE=${TAG} \
-    -X ${PKG}/version.COMMIT=${GIT_COMMIT} \
+    -X ${PKG}/version.COMMIT=${COMMIT_SHA} \
     -X ${PKG}/version.REPO=${REPO_INFO}" \
   -o "rootfs/bin/${ARCH}/nginx-ingress-controller" "${PKG}/cmd/nginx"
 
 go build \
-  -ldflags "-s -w \
+  -trimpath -ldflags="-buildid= -w -s \
     -X ${PKG}/version.RELEASE=${TAG} \
-    -X ${PKG}/version.COMMIT=${GIT_COMMIT} \
+    -X ${PKG}/version.COMMIT=${COMMIT_SHA} \
     -X ${PKG}/version.REPO=${REPO_INFO}" \
   -o "rootfs/bin/${ARCH}/dbg" "${PKG}/cmd/dbg"
 
 go build \
-  -ldflags "-s -w \
+  -trimpath -ldflags="-buildid= -w -s \
     -X ${PKG}/version.RELEASE=${TAG} \
-    -X ${PKG}/version.COMMIT=${GIT_COMMIT} \
+    -X ${PKG}/version.COMMIT=${COMMIT_SHA} \
     -X ${PKG}/version.REPO=${REPO_INFO}" \
   -o "rootfs/bin/${ARCH}/wait-shutdown" "${PKG}/cmd/waitshutdown"

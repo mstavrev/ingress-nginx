@@ -40,7 +40,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	certutil "k8s.io/client-go/util/cert"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 
 	"k8s.io/ingress-nginx/internal/file"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/class"
@@ -354,10 +354,10 @@ func checkService(key string, kubeClient *kubernetes.Clientset) error {
 		}
 
 		if errors.IsNotFound(err) {
-			return fmt.Errorf("No service with name %v found in namespace %v: %v", ns, name, err)
+			return fmt.Errorf("No service with name %v found in namespace %v: %v", name, ns, err)
 		}
 
-		return fmt.Errorf("Unexpected error searching service with name %v in namespace %v: %v", ns, name, err)
+		return fmt.Errorf("Unexpected error searching service with name %v in namespace %v: %v", name, ns, err)
 	}
 
 	return nil

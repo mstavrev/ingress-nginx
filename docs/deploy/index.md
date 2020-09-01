@@ -9,7 +9,7 @@
     If multiple Ingresses define paths for the same host, the ingress controller **merges the definitions**.
 
 !!! danger
-    The [admission webhook](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/) require conectivity between Kubernetes API server and the ingress controller.
+    The [admission webhook](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/) requires connectivity between Kubernetes API server and the ingress controller.
 
     In case [Network policies](https://kubernetes.io/docs/concepts/services-networking/network-policies/) or additional firewalls, please allow access to port `8443`.
 
@@ -49,7 +49,7 @@ Kubernetes is available in Docker for Mac (from [version 18.06.0-ce](https://doc
 [enable]: https://docs.docker.com/docker-for-mac/#kubernetes
 
 ```console
-kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v0.34.1/deploy/static/provider/cloud/deploy.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v0.35.0/deploy/static/provider/cloud/deploy.yaml
 ```
 
 #### minikube
@@ -60,23 +60,6 @@ For standard usage:
 minikube addons enable ingress
 ```
 
-For development:
-
-- Disable the ingress addon:
-
-```console
-minikube addons disable ingress
-```
-
-- Execute `make dev-env`
-- Confirm the `ingress-nginx-controller` deployment exists:
-
-```console
-$ kubectl get pods -n ingress-nginx
-NAME                                       READY     STATUS    RESTARTS   AGE
-ingress-nginx-controller-fdcdcd6dd-vvpgs   1/1       Running   0          11s
-```
-
 #### AWS
 
 In AWS we use a Network load balancer (NLB) to expose the NGINX Ingress controller behind a Service of `Type=LoadBalancer`.
@@ -84,7 +67,7 @@ In AWS we use a Network load balancer (NLB) to expose the NGINX Ingress controll
 ##### Network Load Balancer (NLB)
 
 ```console
-kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v0.34.1/deploy/static/provider/aws/deploy.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v0.35.0/deploy/static/provider/aws/deploy.yaml
 ```
 
 ##### TLS termination in AWS Load Balancer (ELB)
@@ -93,10 +76,10 @@ In some scenarios is required to terminate TLS in the Load Balancer and not in t
 
 For this purpose we provide a template:
 
-- Download [deploy-tls-termination.yaml](https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v0.34.1/deploy/static/provider/aws/deploy-tls-termination.yaml)
+- Download [deploy-tls-termination.yaml](https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v0.35.0/deploy/static/provider/aws/deploy-tls-termination.yaml)
 
 ```console
-wget https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v0.34.1/deploy/static/provider/aws/deploy-tls-termination.yaml
+wget https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v0.35.0/deploy/static/provider/aws/deploy-tls-termination.yaml
 ```
 
 - Edit the file and change:
@@ -117,15 +100,11 @@ kubectl apply -f deploy-tls-termination.yaml
 
 ##### NLB Idle Timeouts
 
-In some scenarios users will need to modify the value of the NLB idle timeout. Users need to ensure the idle timeout is less than the [keepalive_timeout](http://nginx.org/en/docs/http/ngx_http_core_module.html#keepalive_timeout) that is configured for NGINX.
+Idle timeout values for TCP flows is 350 seconds and [cannot be modified](https://docs.aws.amazon.com/elasticloadbalancing/latest/network/network-load-balancers.html#connection-idle-timeout).
+
+For this reason, you need to ensure the [keepalive_timeout](http://nginx.org/en/docs/http/ngx_http_core_module.html#keepalive_timeout) configured value is less than 350 seconds to work as expected.
+
 By default NGINX `keepalive_timeout` is set to `75s`.
-
-The default NLB idle timeout works for most scenarios, unless the NGINX [keepalive_timeout](http://nginx.org/en/docs/http/ngx_http_core_module.html#keepalive_timeout) has been modified, in which case the annotation
-
-`service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout` value must be modified to ensure it is less than the configured `keepalive_timeout`.
-
-!!! note ""
-    An idle timeout of `3600` is recommended when using WebSockets
 
 More information with regards to timeouts for can be found in the [official AWS documentation](https://docs.aws.amazon.com/elasticloadbalancing/latest/network/network-load-balancers.html#connection-idle-timeout)
 
@@ -146,7 +125,7 @@ More information with regards to timeouts for can be found in the [official AWS 
 
 
 ```console
-kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v0.34.1/deploy/static/provider/cloud/deploy.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v0.35.0/deploy/static/provider/cloud/deploy.yaml
 ```
 
 !!! failure Important
@@ -155,13 +134,13 @@ kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/cont
 #### Azure
 
 ```console
-kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v0.34.1/deploy/static/provider/cloud/deploy.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v0.35.0/deploy/static/provider/cloud/deploy.yaml
 ```
 
 #### Digital Ocean
 
 ```console
-kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v0.34.1/deploy/static/provider/do/deploy.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v0.35.0/deploy/static/provider/do/deploy.yaml
 ```
 
 #### Bare-metal
@@ -169,7 +148,7 @@ kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/cont
 Using [NodePort](https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport):
 
 ```console
-kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v0.34.1/deploy/static/provider/baremetal/deploy.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v0.35.0/deploy/static/provider/baremetal/deploy.yaml
 ```
 
 !!! tip

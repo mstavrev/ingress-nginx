@@ -20,7 +20,7 @@ import (
 	"strconv"
 	"time"
 
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 
 	apiv1 "k8s.io/api/core/v1"
 
@@ -479,6 +479,9 @@ type Configuration struct {
 	// Sets whether to use incoming X-Forwarded headers.
 	UseForwardedHeaders bool `json:"use-forwarded-headers"`
 
+	// Sets whether to enable the real ip module
+	EnableRealIp bool `json:"enable-real-ip"`
+
 	// Sets the header field for identifying the originating IP address of a client
 	// Default is X-Forwarded-For
 	ForwardedForHeader string `json:"forwarded-for-header,omitempty"`
@@ -499,6 +502,12 @@ type Configuration struct {
 	// https://github.com/opentracing-contrib/nginx-opentracing
 	// By default this is disabled
 	EnableOpentracing bool `json:"enable-opentracing"`
+
+	// OpentracingOperationName specifies a custom name for the server span
+	OpentracingOperationName string `json:"opentracing-operation-name"`
+
+	// OpentracingOperationName specifies a custom name for the location span
+	OpentracingLocationOperationName string `json:"opentracing-location-operation-name"`
 
 	// ZipkinCollectorHost specifies the host to use when uploading traces
 	ZipkinCollectorHost string `json:"zipkin-collector-host"`
@@ -712,6 +721,7 @@ func NewDefault() Configuration {
 		EnableUnderscoresInHeaders:       false,
 		ErrorLogLevel:                    errorLevel,
 		UseForwardedHeaders:              false,
+		EnableRealIp:                     false,
 		ForwardedForHeader:               "X-Forwarded-For",
 		ComputeFullForwardedFor:          false,
 		ProxyAddOriginalURIHeader:        false,
@@ -823,7 +833,7 @@ func NewDefault() Configuration {
 		DefaultType:                  "text/html",
 	}
 
-	if klog.V(5) {
+	if klog.V(5).Enabled() {
 		cfg.ErrorLogLevel = "debug"
 	}
 

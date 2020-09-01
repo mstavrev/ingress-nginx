@@ -36,15 +36,15 @@ build: ensure-buildx
 		--platform=${PLATFORMS} $(OUTPUT) \
 		--progress=$(PROGRESS) \
 		--pull \
-		--build-arg BASE_IMAGE=us.gcr.io/k8s-artifacts-prod/ingress-nginx/nginx:v20200708-g00f4a215d@sha256:b0727cebafc35f5ab50f3fa0be5fda7f79937f1683f525f40982e75b882195d8 \
-		--build-arg GOLANG_VERSION=1.14.5 \
+		--build-arg BASE_IMAGE=k8s.gcr.io/ingress-nginx/nginx:v20200812-g0673e5e17@sha256:3bafc6840f2477c05eb029580fa8ecf4bd33b0f0765e3cd9cc82ad91f817ccf3 \
+		--build-arg GOLANG_VERSION=1.15 \
 		--build-arg ETCD_VERSION=3.4.3-0 \
 		--build-arg K8S_RELEASE=v1.15.7 \
 		--build-arg RESTY_CLI_VERSION=0.25 \
 		--build-arg RESTY_CLI_SHA=7c3d1317d7ddab2030b49610c89e301995d4ae0f815f16466c48144d05ec7bcb \
 		--build-arg LUAROCKS_VERSION=3.3.1 \
 		--build-arg LUAROCKS_SHA=837481e408f7c06b59befe7ec194537c657687d624894bca7f79034302141a34 \
-		--build-arg CHART_TESTING_VERSION=3.0.0-beta.1 \
+		--build-arg CHART_TESTING_VERSION=3.0.0 \
 		--build-arg YAML_LINT_VERSION=1.13.0 \
 		--build-arg YAMALE_VERSION=1.8.0 \
 		--build-arg HELM_VERSION=v3.2.1 \

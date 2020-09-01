@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"os/exec"
 	"strings"
 	"time"
 
@@ -34,6 +33,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1beta1"
 	apiextcs "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -41,7 +41,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/ingress-nginx/internal/k8s"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 	kubeframework "k8s.io/kubernetes/test/e2e/framework"
 )
 
@@ -115,6 +115,7 @@ func (f *Framework) BeforeEach() {
 func (f *Framework) AfterEach() {
 	defer func(kubeClient kubernetes.Interface, ns string) {
 		go func() {
+			defer ginkgo.GinkgoRecover()
 			err := deleteKubeNamespace(kubeClient, ns)
 			assert.Nil(ginkgo.GinkgoT(), err, "deleting namespace %v", f.Namespace)
 		}()
@@ -204,20 +205,21 @@ func (f *Framework) GetURL(scheme RequestScheme) string {
 
 // WaitForNginxServer waits until the nginx configuration contains a particular server section
 func (f *Framework) WaitForNginxServer(name string, matcher func(cfg string) bool) {
-	err := wait.PollImmediate(Poll, DefaultTimeout, f.matchNginxConditions(name, matcher))
+	err := wait.Poll(Poll, DefaultTimeout, f.matchNginxConditions(name, matcher))
 	assert.Nil(ginkgo.GinkgoT(), err, "waiting for nginx server condition/s")
 	Sleep(1 * time.Second)
 }
 
 // WaitForNginxConfiguration waits until the nginx configuration contains a particular configuration
 func (f *Framework) WaitForNginxConfiguration(matcher func(cfg string) bool) {
-	err := wait.PollImmediate(Poll, DefaultTimeout, f.matchNginxConditions("", matcher))
+	err := wait.Poll(Poll, DefaultTimeout, f.matchNginxConditions("", matcher))
 	assert.Nil(ginkgo.GinkgoT(), err, "waiting for nginx server condition/s")
+	Sleep(1 * time.Second)
 }
 
 // WaitForNginxCustomConfiguration waits until the nginx configuration given part (from, to) contains a particular configuration
 func (f *Framework) WaitForNginxCustomConfiguration(from string, to string, matcher func(cfg string) bool) {
-	err := wait.PollImmediate(Poll, DefaultTimeout, f.matchNginxCustomConditions(from, to, matcher))
+	err := wait.Poll(Poll, DefaultTimeout, f.matchNginxCustomConditions(from, to, matcher))
 	assert.Nil(ginkgo.GinkgoT(), err, "waiting for nginx server condition/s")
 }
 
@@ -258,7 +260,7 @@ func (f *Framework) matchNginxConditions(name string, matcher func(cfg string) b
 			return false, nil
 		}
 
-		if klog.V(10) && len(o) > 0 {
+		if klog.V(10).Enabled() && len(o) > 0 {
 			klog.Infof("nginx.conf:\n%v", o)
 		}
 
@@ -285,7 +287,7 @@ func (f *Framework) matchNginxCustomConditions(from string, to string, matcher f
 			return false, nil
 		}
 
-		if klog.V(10) && len(o) > 0 {
+		if klog.V(10).Enabled() && len(o) > 0 {
 			klog.Infof("nginx.conf:\n%v", o)
 		}
 
@@ -377,7 +379,7 @@ func (f *Framework) waitForReload(fn func()) {
 	err := wait.Poll(Poll, DefaultTimeout, func() (bool, error) {
 		// most of the cases reload the ingress controller
 		// in cases where the value is not modified we could wait forever
-		if count > 3 {
+		if count > 10 {
 			return true, nil
 		}
 
@@ -426,7 +428,7 @@ func (f *Framework) DeleteNGINXPod(grace int64) {
 	err = f.KubeClientSet.CoreV1().Pods(ns).Delete(context.TODO(), pod.GetName(), *metav1.NewDeleteOptions(grace))
 	assert.Nil(ginkgo.GinkgoT(), err, "deleting ingress nginx pod")
 
-	err = wait.PollImmediate(Poll, DefaultTimeout, func() (bool, error) {
+	err = wait.Poll(Poll, DefaultTimeout, func() (bool, error) {
 		pod, err := GetIngressNGINXPod(ns, f.KubeClientSet)
 		if err != nil || pod == nil {
 			return false, nil
@@ -502,14 +504,12 @@ func UpdateDeployment(kubeClientSet kubernetes.Interface, namespace string, name
 		return err
 	}
 
-	rolloutStatsCmd := fmt.Sprintf("%v --namespace %s rollout status deployment/%s -w --timeout 5m", KubectlPath, namespace, deployment.Name)
-
 	if updateFunc != nil {
 		if err := updateFunc(deployment); err != nil {
 			return err
 		}
 
-		err = exec.Command("bash", "-c", rolloutStatsCmd).Run()
+		err = waitForDeploymentRollout(kubeClientSet, deployment)
 		if err != nil {
 			return err
 		}
@@ -522,7 +522,7 @@ func UpdateDeployment(kubeClientSet kubernetes.Interface, namespace string, name
 			return errors.Wrapf(err, "scaling the number of replicas to %v", replicas)
 		}
 
-		err = exec.Command("/bin/bash", "-c", rolloutStatsCmd).Run()
+		err = waitForDeploymentRollout(kubeClientSet, deployment)
 		if err != nil {
 			return err
 		}
@@ -536,6 +536,29 @@ func UpdateDeployment(kubeClientSet kubernetes.Interface, namespace string, name
 	}
 
 	return nil
+}
+
+func waitForDeploymentRollout(kubeClientSet kubernetes.Interface, resource *appsv1.Deployment) error {
+	return wait.Poll(Poll, 5*time.Minute, func() (bool, error) {
+		d, err := kubeClientSet.AppsV1().Deployments(resource.Namespace).Get(context.TODO(), resource.Name, metav1.GetOptions{})
+		if apierrors.IsNotFound(err) {
+			return false, nil
+		}
+
+		if err != nil {
+			return false, nil
+		}
+
+		if d.DeletionTimestamp != nil {
+			return false, fmt.Errorf("deployment %q is being deleted", resource.Name)
+		}
+
+		if d.Generation <= d.Status.ObservedGeneration && d.Status.UpdatedReplicas == d.Status.Replicas && d.Status.UnavailableReplicas == 0 {
+			return true, nil
+		}
+
+		return false, nil
+	})
 }
 
 // UpdateIngress runs the given updateFunc on the ingress
