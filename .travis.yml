@@ -32,3 +32,7 @@ before_install:
 #      if: type = api AND branch = master AND repo = kubernetes/ingress-nginx AND env(COMPONENT) = "docs"
 #      script:
 #        - .travis/publish-docs.sh
+
+script:
+  - cd images/nginx && make push
+  - make push
