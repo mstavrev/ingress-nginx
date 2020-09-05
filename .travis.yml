@@ -10,8 +10,8 @@ notifications:
     on_success: always
 
 before_install:
-#  - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-#  - curl -fsSL https://get.docker.com | sh
+  - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+  - curl -fsSL https://get.docker.com | sh
   - echo '{"experimental":"enabled"}' | sudo tee /etc/docker/daemon.json
   - mkdir -p $HOME/.docker
   - echo '{"experimental":"enabled"}' | tee $HOME/.docker/config.json
