@@ -51,7 +51,7 @@ endif
 
 REGISTRY ?= docker.io/mstavrev
 
-BASE_IMAGE ?= docker.io/mstavrev/nginx:0.108
+BASE_IMAGE ?= docker.io/mstavrev/nginx:0.109
 
 GOARCH=$(ARCH)
 
@@ -167,7 +167,7 @@ live-docs: ## Build and launch a local copy of the documentation website in http
 	@docker run --rm -it \
 		-p 8000:8000 \
 		-v ${PWD}:/docs \
-		squidfunk/mkdocs-material:5.2.3
+		squidfunk/mkdocs-material:5.5.12
 
 .PHONY: misspell
 misspell:  ## Check for spelling errors.

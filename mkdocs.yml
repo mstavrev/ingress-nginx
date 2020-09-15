@@ -4,6 +4,8 @@ repo_url: https://github.com/kubernetes/ingress-nginx
 site_url: https://kubernetes.github.io/ingress-nginx
 
 markdown_extensions:
+  - attr_list
+  - pymdownx.emoji
   - admonition
   - codehilite
   - pymdownx.inlinehilite
@@ -46,6 +48,7 @@ nav:
       - Bare-metal considerations: "deploy/baremetal.md"
       - Role Based Access Control (RBAC): "deploy/rbac.md"
       - Upgrade: "deploy/upgrade.md"
+      - Hardening guide: "deploy/hardening-guide.md"
   - User guide:
       - NGINX Configuration:
           - Introduction: "user-guide/nginx-configuration/index.md"

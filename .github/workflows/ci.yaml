@@ -42,7 +42,8 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     needs: changes
-    if: ${{ needs.changes.outputs.go == 'true' }}
+    if: |
+      (needs.changes.outputs.go == 'true')
 
     steps:
 
@@ -100,7 +101,8 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - changes
-    if: ${{ needs.changes.outputs.charts == 'true' }}
+    if: |
+      (needs.changes.outputs.charts == 'true')
 
     steps:
 
@@ -137,10 +139,12 @@ jobs:
     needs:
       - changes
       - build
-    if: ${{ needs.changes.outputs.go == 'true' }}
+    if: |
+      (needs.changes.outputs.go == 'true')
+
     strategy:
       matrix:
-        k8s: [v1.14.10, v1.15.11, v1.16.9, v1.17.5, v1.18.4]
+        k8s: [v1.17.5, v1.18.8, v1.19.0]
 
     steps:
 

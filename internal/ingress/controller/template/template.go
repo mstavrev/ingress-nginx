@@ -31,7 +31,6 @@ import (
 	"os/exec"
 	"reflect"
 	"regexp"
-	"runtime"
 	"sort"
 	"strings"
 	text_template "text/template"
@@ -181,6 +180,8 @@ var (
 		"shouldLoadOpentracingModule":        shouldLoadOpentracingModule,
 		"buildModSecurityForLocation":        buildModSecurityForLocation,
 		"buildMirrorLocations":               buildMirrorLocations,
+		"shouldLoadAuthDigestModule":         shouldLoadAuthDigestModule,
+		"shouldLoadInfluxDBModule":           shouldLoadInfluxDBModule,
 	}
 )
 
@@ -956,16 +957,13 @@ func buildOpentracing(c interface{}, s interface{}) string {
 	}
 
 	buf := bytes.NewBufferString("")
-	if cfg.ZipkinCollectorHost != "" {
-		buf.WriteString("opentracing_load_tracer /usr/local/lib/libzipkin_opentracing.so /etc/nginx/opentracing.json;")
-	} else if cfg.JaegerCollectorHost != "" {
-		if runtime.GOARCH == "arm" {
-			buf.WriteString("# Jaeger tracer is not available for ARM https://github.com/jaegertracing/jaeger-client-cpp/issues/151")
-		} else {
-			buf.WriteString("opentracing_load_tracer /usr/local/lib/libjaegertracing_plugin.so /etc/nginx/opentracing.json;")
-		}
-	} else if cfg.DatadogCollectorHost != "" {
+
+	if cfg.DatadogCollectorHost != "" {
 		buf.WriteString("opentracing_load_tracer /usr/local/lib64/libdd_opentracing.so /etc/nginx/opentracing.json;")
+	} else if cfg.ZipkinCollectorHost != "" {
+		buf.WriteString("opentracing_load_tracer /usr/local/lib/libzipkin_opentracing_plugin.so /etc/nginx/opentracing.json;")
+	} else if cfg.JaegerCollectorHost != "" {
+		buf.WriteString("opentracing_load_tracer /usr/local/lib/libjaegertracing_plugin.so /etc/nginx/opentracing.json;")
 	}
 
 	buf.WriteString("\r\n")
@@ -1418,4 +1416,46 @@ proxy_pass %v;
 	}
 
 	return buffer.String()
+}
+
+// shouldLoadAuthDigestModule determines whether or not the ngx_http_auth_digest_module module needs to be loaded.
+func shouldLoadAuthDigestModule(s interface{}) bool {
+	servers, ok := s.([]*ingress.Server)
+	if !ok {
+		klog.Errorf("expected an '[]*ingress.Server' type but %T was returned", s)
+		return false
+	}
+
+	for _, server := range servers {
+		for _, location := range server.Locations {
+			if !location.BasicDigestAuth.Secured {
+				continue
+			}
+
+			if location.BasicDigestAuth.Type == "digest" {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+// shouldLoadInfluxDBModule determines whether or not the ngx_http_auth_digest_module module needs to be loaded.
+func shouldLoadInfluxDBModule(s interface{}) bool {
+	servers, ok := s.([]*ingress.Server)
+	if !ok {
+		klog.Errorf("expected an '[]*ingress.Server' type but %T was returned", s)
+		return false
+	}
+
+	for _, server := range servers {
+		for _, location := range server.Locations {
+			if location.InfluxDB.InfluxDBEnabled {
+				return true
+			}
+		}
+	}
+
+	return false
 }
