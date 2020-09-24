@@ -79,14 +79,14 @@ The following table shows a configuration option's name, type, and the default v
 |[proxy-headers-hash-bucket-size](#proxy-headers-hash-bucket-size)|int|64|
 |[plugins](#plugins)|[]string| |
 |[reuse-port](#reuse-port)|bool|"true"|
-|[server-tokens](#server-tokens)|bool|"true"|
+|[server-tokens](#server-tokens)|bool|"false"|
 |[ssl-ciphers](#ssl-ciphers)|string|"ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384"|
 |[ssl-ecdh-curve](#ssl-ecdh-curve)|string|"auto"|
 |[ssl-dh-param](#ssl-dh-param)|string|""|
 |[ssl-protocols](#ssl-protocols)|string|"TLSv1.2 TLSv1.3"|
 |[ssl-session-cache](#ssl-session-cache)|bool|"true"|
 |[ssl-session-cache-size](#ssl-session-cache-size)|string|"10m"|
-|[ssl-session-tickets](#ssl-session-tickets)|bool|"true"|
+|[ssl-session-tickets](#ssl-session-tickets)|bool|"false"|
 |[ssl-session-ticket-key](#ssl-session-ticket-key)|string|`<Randomly Generated>`
 |[ssl-session-timeout](#ssl-session-timeout)|string|"10m"|
 |[ssl-buffer-size](#ssl-buffer-size)|string|"4k"|
@@ -498,7 +498,7 @@ Activates plugins installed in `/etc/nginx/lua/plugins`. Refer to [ingress-nginx
 
 ## server-tokens
 
-Send NGINX Server header in responses and display NGINX version in error pages. _**default:**_ is enabled
+Send NGINX Server header in responses and display NGINX version in error pages. _**default:**_ is disabled
 
 ## ssl-ciphers
 

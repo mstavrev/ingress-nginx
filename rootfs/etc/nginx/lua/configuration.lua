@@ -11,6 +11,7 @@ local pairs = pairs
 local configuration_data = ngx.shared.configuration_data
 local certificate_data = ngx.shared.certificate_data
 local certificate_servers = ngx.shared.certificate_servers
+local ocsp_response_cache = ngx.shared.ocsp_response_cache
 
 local EMPTY_UID = "-1"
 
@@ -100,8 +101,19 @@ local function handle_servers()
   end
 
   for uid, cert in pairs(configuration.certificates) do
+    -- don't delete the cache here, certificate_data[uid] is not replaced yet.
+    -- there is small chance that nginx worker still get the old certificate,
+    -- then fetch and cache the old OCSP Response
+    local old_cert = certificate_data:get(uid)
+    local is_renew = (old_cert ~= nil and old_cert ~= cert)
+
     local success, set_err, forcible = certificate_data:set(uid, cert)
-    if not success then
+    if success then
+        -- delete ocsp cache after certificate_data:set succeed
+        if is_renew then
+            ocsp_response_cache:delete(uid)
+        end
+    else
       local err_msg = string.format("error setting certificate for %s: %s\n",
         uid, tostring(set_err))
       table.insert(err_buf, err_msg)
