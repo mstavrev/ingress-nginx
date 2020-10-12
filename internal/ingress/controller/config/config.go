@@ -166,9 +166,18 @@ type Configuration struct {
 	// http://nginx.org/en/docs/http/ngx_http_core_module.html#client_body_timeout
 	ClientBodyTimeout int `json:"client-body-timeout,omitempty"`
 
-	// DisableAccessLog disables the Access Log globally from NGINX ingress controller
-	//http://nginx.org/en/docs/http/ngx_http_log_module.html
+	// DisableAccessLog disables the Access Log globally for both HTTP and Stream contexts from NGINX ingress controller
+	// http://nginx.org/en/docs/http/ngx_http_log_module.html
+	// http://nginx.org/en/docs/stream/ngx_stream_log_module.html
 	DisableAccessLog bool `json:"disable-access-log,omitempty"`
+
+	// DisableHTTPAccessLog disables the Access Log for http context globally from NGINX ingress controller
+	// http://nginx.org/en/docs/http/ngx_http_log_module.html
+	DisableHTTPAccessLog bool `json:"disable-http-access-log,omitempty"`
+
+	// DisableStreamAccessLog disables the Access Log for stream context globally from NGINX ingress controller
+	// http://nginx.org/en/docs/stream/ngx_stream_log_module.html
+	DisableStreamAccessLog bool `json:"disable-stream-access-log,omitempty"`
 
 	// DisableIpv6DNS disables IPv6 for nginx resolver
 	DisableIpv6DNS bool `json:"disable-ipv6-dns"`
@@ -764,7 +773,7 @@ func NewDefault() Configuration {
 		SSLSessionTickets:                false,
 		SSLSessionTimeout:                sslSessionTimeout,
 		EnableBrotli:                     false,
-		UseGzip:                          true,
+		UseGzip:                          false,
 		UseGeoIP:                         true,
 		UseGeoIP2:                        false,
 		WorkerProcesses:                  strconv.Itoa(runtime.NumCPU()),
@@ -798,9 +807,9 @@ func NewDefault() Configuration {
 			ProxyHTTPVersion:         "1.1",
 			ProxyMaxTempFileSize:     "1024m",
 		},
-		UpstreamKeepaliveConnections: 32,
+		UpstreamKeepaliveConnections: 320,
 		UpstreamKeepaliveTimeout:     60,
-		UpstreamKeepaliveRequests:    100,
+		UpstreamKeepaliveRequests:    10000,
 		LimitConnZoneVariable:        defaultLimitConnZoneVariable,
 		BindAddressIpv4:              defBindAddress,
 		BindAddressIpv6:              defBindAddress,

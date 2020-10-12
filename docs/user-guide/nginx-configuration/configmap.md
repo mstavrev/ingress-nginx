@@ -92,14 +92,14 @@ The following table shows a configuration option's name, type, and the default v
 |[ssl-buffer-size](#ssl-buffer-size)|string|"4k"|
 |[use-proxy-protocol](#use-proxy-protocol)|bool|"false"|
 |[proxy-protocol-header-timeout](#proxy-protocol-header-timeout)|string|"5s"|
-|[use-gzip](#use-gzip)|bool|"true"|
+|[use-gzip](#use-gzip)|bool|"false"|
 |[use-geoip](#use-geoip)|bool|"true"|
 |[use-geoip2](#use-geoip2)|bool|"false"|
 |[enable-brotli](#enable-brotli)|bool|"false"|
 |[brotli-level](#brotli-level)|int|4|
 |[brotli-types](#brotli-types)|string|"application/xml+rss application/atom+xml application/javascript application/x-javascript application/json application/rss+xml application/vnd.ms-fontobject application/x-font-ttf application/x-web-app-manifest+json application/xhtml+xml application/xml font/opentype image/svg+xml image/x-icon text/css text/javascript text/plain text/x-component"|
 |[use-http2](#use-http2)|bool|"true"|
-|[gzip-level](#gzip-level)|int|5|
+|[gzip-level](#gzip-level)|int|1|
 |[gzip-types](#gzip-types)|string|"application/atom+xml application/javascript application/x-javascript application/json application/rss+xml application/vnd.ms-fontobject application/x-font-ttf application/x-web-app-manifest+json application/xhtml+xml application/xml font/opentype image/svg+xml image/x-icon text/css text/javascript text/plain text/x-component"|
 |[worker-processes](#worker-processes)|string|`<Number of CPUs>`|
 |[worker-cpu-affinity](#worker-cpu-affinity)|string|""|
@@ -107,9 +107,9 @@ The following table shows a configuration option's name, type, and the default v
 |[load-balance](#load-balance)|string|"round_robin"|
 |[variables-hash-bucket-size](#variables-hash-bucket-size)|int|128|
 |[variables-hash-max-size](#variables-hash-max-size)|int|2048|
-|[upstream-keepalive-connections](#upstream-keepalive-connections)|int|32|
+|[upstream-keepalive-connections](#upstream-keepalive-connections)|int|320|
 |[upstream-keepalive-timeout](#upstream-keepalive-timeout)|int|60|
-|[upstream-keepalive-requests](#upstream-keepalive-requests)|int|100|
+|[upstream-keepalive-requests](#upstream-keepalive-requests)|int|10000|
 |[limit-conn-zone-variable](#limit-conn-zone-variable)|string|"$binary_remote_addr"|
 |[proxy-stream-timeout](#proxy-stream-timeout)|string|"600s"|
 |[proxy-stream-responses](#proxy-stream-responses)|int|1|
@@ -587,7 +587,7 @@ _**default:**_ 5s
 
 ## use-gzip
 
-Enables or disables compression of HTTP responses using the ["gzip" module](http://nginx.org/en/docs/http/ngx_http_gzip_module.html). MIME types to compress are controlled by [gzip-types](#gzip-types). _**default:**_ true
+Enables or disables compression of HTTP responses using the ["gzip" module](http://nginx.org/en/docs/http/ngx_http_gzip_module.html). MIME types to compress are controlled by [gzip-types](#gzip-types). _**default:**_ false
 
 ## use-geoip
 
@@ -630,7 +630,7 @@ Enables or disables [HTTP/2](http://nginx.org/en/docs/http/ngx_http_v2_module.ht
 
 ## gzip-level
 
-Sets the gzip Compression Level that will be used. _**default:**_ 5
+Sets the gzip Compression Level that will be used. _**default:**_ 1
 
 ## gzip-min-length
 
@@ -694,7 +694,7 @@ _References:_
 Activates the cache for connections to upstream servers. The connections parameter sets the maximum number of idle
 keepalive connections to upstream servers that are preserved in the cache of each worker process. When this number is
 exceeded, the least recently used connections are closed.
-_**default:**_ 32
+_**default:**_ 320
 
 _References:_
 [http://nginx.org/en/docs/http/ngx_http_upstream_module.html#keepalive](http://nginx.org/en/docs/http/ngx_http_upstream_module.html#keepalive)
@@ -713,7 +713,7 @@ _References:_
 
 Sets the maximum number of requests that can be served through one keepalive connection. After the maximum number of
 requests is made, the connection is closed.
-_**default:**_ 100
+_**default:**_ 10000
 
 
 _References:_

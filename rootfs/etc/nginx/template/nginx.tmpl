@@ -338,7 +338,7 @@ http {
         default 1;
     }
 
-    {{ if $cfg.DisableAccessLog }}
+    {{ if or $cfg.DisableAccessLog $cfg.DisableHTTPAccessLog }}
     access_log off;
     {{ else }}
     {{ if $cfg.EnableSyslog }}
@@ -554,12 +554,21 @@ http {
         }
         {{ end }}
 
-        {{ if ne $all.ListenPorts.HTTPS 443 }}
-        {{ $redirect_port := (printf ":%v" $all.ListenPorts.HTTPS) }}
-        return {{ $all.Cfg.HTTPRedirectCode }} $scheme://{{ $redirect.To }}{{ $redirect_port }}$request_uri;
-        {{ else }}
-        return {{ $all.Cfg.HTTPRedirectCode }} $scheme://{{ $redirect.To }}$request_uri;
-        {{ end }}
+        set_by_lua_block $redirect_to {
+            local request_uri = ngx.var.request_uri
+            if string.sub(request_uri, -1) == "/" then
+                request_uri = string.sub(request_uri, 1, -2)
+            end
+
+            {{ if ne $all.ListenPorts.HTTPS 443 }}
+            {{ $redirect_port := (printf ":%v" $all.ListenPorts.HTTPS) }}
+            return string.format("%s://%s%s%s", ngx.var.scheme, "{{ $redirect.To }}", "{{ $redirect_port }}", request_uri)
+            {{ else }}
+            return string.format("%s://%s%s", ngx.var.scheme, "{{ $redirect.To }}", request_uri)
+            {{ end }}
+        }
+
+        return {{ $all.Cfg.HTTPRedirectCode }} $redirect_to;
     }
     ## end server {{ $redirect.From }}
     {{ end }}
@@ -702,7 +711,7 @@ stream {
 
     log_format log_stream '{{ $cfg.LogFormatStream }}';
 
-    {{ if $cfg.DisableAccessLog }}
+    {{ if or $cfg.DisableAccessLog $cfg.DisableStreamAccessLog }}
     access_log off;
     {{ else }}
     access_log {{ or $cfg.StreamAccessLogPath $cfg.AccessLogPath }} log_stream {{ $cfg.AccessLogParams }};
@@ -830,6 +839,7 @@ stream {
         {{ if $cors.CorsAllowCredentials }} more_set_headers 'Access-Control-Allow-Credentials: {{ $cors.CorsAllowCredentials }}'; {{ end }}
         more_set_headers 'Access-Control-Allow-Methods: {{ $cors.CorsAllowMethods }}';
         more_set_headers 'Access-Control-Allow-Headers: {{ $cors.CorsAllowHeaders }}';
+        {{ if not (empty $cors.CorsExposeHeaders) }} more_set_headers 'Access-Control-Expose-Headers: {{ $cors.CorsExposeHeaders }}'; {{ end }}
         more_set_headers 'Access-Control-Max-Age: {{ $cors.CorsMaxAge }}';
         more_set_headers 'Content-Type: text/plain charset=UTF-8';
         more_set_headers 'Content-Length: 0';
@@ -838,8 +848,7 @@ stream {
 
         more_set_headers 'Access-Control-Allow-Origin: {{ $cors.CorsAllowOrigin }}';
         {{ if $cors.CorsAllowCredentials }} more_set_headers 'Access-Control-Allow-Credentials: {{ $cors.CorsAllowCredentials }}'; {{ end }}
-        more_set_headers 'Access-Control-Allow-Methods: {{ $cors.CorsAllowMethods }}';
-        more_set_headers 'Access-Control-Allow-Headers: {{ $cors.CorsAllowHeaders }}';
+        {{ if not (empty $cors.CorsExposeHeaders) }} more_set_headers 'Access-Control-Expose-Headers: {{ $cors.CorsExposeHeaders }}'; {{ end }}
 
 {{ end }}
 

@@ -1,11 +1,11 @@
 ## nginx configuration
-## Ref: https://github.com/kubernetes/ingress/blob/master/controllers/nginx/configuration.md
+## Ref: https://github.com/kubernetes/ingress-nginx/blob/master/controllers/nginx/configuration.md
 ##
 controller:
   image:
     repository: k8s.gcr.io/ingress-nginx/controller
-    tag: "v0.35.0"
-    digest: sha256:fc4979d8b8443a831c9789b5155cded454cb7de737a8b727bc2ba0106d2eae8b
+    tag: "v0.40.2"
+    digest: sha256:46ba23c3fbaafd9e5bd01ea85b2f921d9f2217be082580edc22e6c704a83f02f
     pullPolicy: IfNotPresent
     # www-data -> uid 101
     runAsUser: 101
@@ -228,7 +228,8 @@ controller:
   ## Node labels for controller pod assignment
   ## Ref: https://kubernetes.io/docs/user-guide/node-selection/
   ##
-  nodeSelector: {}
+  nodeSelector:
+    kubernetes.io/os: linux
 
   ## Liveness and readiness probe values
   ## Ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes
@@ -406,9 +407,15 @@ controller:
   #   command: ['sh', '-c', 'until nslookup myservice; do echo waiting for myservice; sleep 2; done;']
 
   admissionWebhooks:
+    annotations: {}
     enabled: true
     failurePolicy: Fail
+    # timeoutSeconds: 10
     port: 8443
+    certificate: "/usr/local/certificates/cert"
+    key: "/usr/local/certificates/key"
+    namespaceSelector: {}
+    objectSelector: {}
 
     service:
       annotations: {}

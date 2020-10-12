@@ -21,6 +21,7 @@ import (
 	"os"
 	"time"
 
+	"k8s.io/ingress-nginx/internal/k8s"
 	"k8s.io/klog/v2"
 
 	apiv1 "k8s.io/api/core/v1"
@@ -33,9 +34,6 @@ import (
 )
 
 type leaderElectionConfig struct {
-	PodName      string
-	PodNamespace string
-
 	Client clientset.Interface
 
 	ElectionID string
@@ -62,7 +60,7 @@ func setupLeaderElection(config *leaderElectionConfig) {
 	var stopCh chan struct{}
 	callbacks := leaderelection.LeaderCallbacks{
 		OnStartedLeading: func(ctx context.Context) {
-			klog.V(2).Infof("I am the new leader")
+			klog.V(2).InfoS("I am the new leader")
 			stopCh = make(chan struct{})
 
 			if config.OnStartedLeading != nil {
@@ -70,7 +68,7 @@ func setupLeaderElection(config *leaderElectionConfig) {
 			}
 		},
 		OnStoppedLeading: func() {
-			klog.V(2).Info("I am not leader anymore")
+			klog.V(2).InfoS("I am not leader anymore")
 			close(stopCh)
 
 			// cancel the context
@@ -83,7 +81,7 @@ func setupLeaderElection(config *leaderElectionConfig) {
 			}
 		},
 		OnNewLeader: func(identity string) {
-			klog.Infof("new leader elected: %v", identity)
+			klog.InfoS("New leader elected", "identity", identity)
 		},
 	}
 
@@ -95,17 +93,21 @@ func setupLeaderElection(config *leaderElectionConfig) {
 		Host:      hostname,
 	})
 
+	ingressPod, err := k8s.GetPodDetails()
+	if err != nil {
+		klog.Fatalf("unexpected error starting leader election: %v", err)
+	}
+
 	lock := resourcelock.ConfigMapLock{
-		ConfigMapMeta: metav1.ObjectMeta{Namespace: config.PodNamespace, Name: config.ElectionID},
+		ConfigMapMeta: metav1.ObjectMeta{Namespace: ingressPod.Namespace, Name: config.ElectionID},
 		Client:        config.Client.CoreV1(),
 		LockConfig: resourcelock.ResourceLockConfig{
-			Identity:      config.PodName,
+			Identity:      ingressPod.Name,
 			EventRecorder: recorder,
 		},
 	}
 
 	ttl := 30 * time.Second
-	var err error
 
 	elector, err = leaderelection.NewLeaderElector(leaderelection.LeaderElectionConfig{
 		Lock:          &lock,

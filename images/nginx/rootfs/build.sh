@@ -18,7 +18,7 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-export NGINX_VERSION=1.19.2
+export NGINX_VERSION=1.19.3
 export NDK_VERSION=0.3.1
 export SETMISC_VERSION=0.32
 export MORE_HEADERS_VERSION=0.33
@@ -29,7 +29,7 @@ export OPENTRACING_CPP_VERSION=1.5.1
 export ZIPKIN_CPP_VERSION=0.5.2
 export JAEGER_VERSION=0.4.2
 export MSGPACK_VERSION=3.2.1
-export DATADOG_CPP_VERSION=1.1.5
+export DATADOG_CPP_VERSION=1.2.0
 export MODSECURITY_VERSION=b55a5778c539529ae1aa10ca49413771d52bb62e
 export MODSECURITY_LIB_VERSION=v3.0.4
 export OWASP_MODSECURITY_CRS_VERSION=v3.3.0
@@ -119,7 +119,7 @@ mkdir --verbose -p "$BUILD_PATH"
 cd "$BUILD_PATH"
 
 # download, verify and extract the source files
-get_src 7c1f7bb13e79433ee930c597d272a64bc6e30c356a48524f38fd34fa88d62473 \
+get_src 91e5b74fa17879d2463294e93ad8f6ffc066696ae32ad0478ffe15ba0e9e8df0 \
         "https://nginx.org/download/nginx-$NGINX_VERSION.tar.gz"
 
 get_src 0e971105e210d272a497567fa2e2c256f4e39b845a5ba80d373e26ba1abfbd85 \
@@ -167,7 +167,7 @@ get_src 2a69815e4ae01aa8b170941a8e1a10b6f6a9aab699dee485d58f021dd933829a \
 get_src 82bf1af1ee89887648b53c9df566f8b52ec10400f1641c051970a7540b7bf06a \
         "https://github.com/openresty/luajit2/archive/$LUAJIT_VERSION.tar.gz"
 
-get_src b84fd2fb0bb0578af4901db31d1c0ae909b532a1016fe6534cbe31a6c3ad6924 \
+get_src 3e6fe45f467d653870985cc52a1c2cf81a8a2c7a7bcf7ffcfedfd305a47a1eca \
         "https://github.com/DataDog/dd-opentracing-cpp/archive/v$DATADOG_CPP_VERSION.tar.gz"
 
 get_src 6faab57557bd9cc9fc38208f6bc304c1c13cf048640779f98812cf1f9567e202 \
