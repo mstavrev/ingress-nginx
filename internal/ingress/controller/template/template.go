@@ -182,6 +182,7 @@ var (
 		"buildMirrorLocations":               buildMirrorLocations,
 		"shouldLoadAuthDigestModule":         shouldLoadAuthDigestModule,
 		"shouldLoadInfluxDBModule":           shouldLoadInfluxDBModule,
+		"buildServerName":                    buildServerName,
 	}
 )
 
@@ -316,16 +317,26 @@ func locationConfigForLua(l interface{}, a interface{}) string {
 		return "{}"
 	}
 
+	pathType := ""
+	if location.PathType != nil {
+		pathType = fmt.Sprintf("%v", *location.PathType)
+	}
+	if needsRewrite(location) || location.Rewrite.UseRegex {
+		pathType = ""
+	}
+
 	return fmt.Sprintf(`{
 		force_ssl_redirect = %t,
 		ssl_redirect = %t,
 		force_no_ssl_redirect = %t,
 		use_port_in_redirects = %t,
+		path_type = "%v",
 	}`,
 		location.Rewrite.ForceSSLRedirect,
 		location.Rewrite.SSLRedirect,
 		isLocationInLocationList(l, all.Cfg.NoTLSRedirectLocations),
 		location.UsePortInRedirects,
+		pathType,
 	)
 }
 
@@ -406,7 +417,7 @@ func buildLocation(input interface{}, enforceRegex bool) string {
 	}
 
 	if location.PathType != nil && *location.PathType == networkingv1beta1.PathTypeExact {
-		return fmt.Sprintf(`= %s`, path)
+		return fmt.Sprintf(`~ ^%s$`, path)
 	}
 
 	return path
@@ -1458,4 +1469,16 @@ func shouldLoadInfluxDBModule(s interface{}) bool {
 	}
 
 	return false
+}
+
+// buildServerName ensures wildcard hostnames are valid
+func buildServerName(hostname string) string {
+	if !strings.HasPrefix(hostname, "*") {
+		return hostname
+	}
+
+	hostname = strings.Replace(hostname, "*.", "", 1)
+	parts := strings.Split(hostname, ".")
+
+	return `~^(?<subdomain>[\w-]+)\.` + strings.Join(parts, "\\.") + `$`
 }

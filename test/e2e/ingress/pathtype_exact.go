@@ -35,7 +35,7 @@ var _ = framework.IngressNginxDescribe("[Ingress] [PathType] exact", func() {
 	})
 
 	ginkgo.It("should choose exact location for /exact", func() {
-		if !f.IsIngressV1Ready {
+		if !f.IsIngressV1Beta1Ready {
 			ginkgo.Skip("Test requires Kubernetes v1.18 or higher")
 		}
 
@@ -60,7 +60,7 @@ var _ = framework.IngressNginxDescribe("[Ingress] [PathType] exact", func() {
 		f.WaitForNginxServer(host,
 			func(server string) bool {
 				return strings.Contains(server, host) &&
-					strings.Contains(server, "location = /exact") &&
+					strings.Contains(server, "location ~ ^/exact$") &&
 					strings.Contains(server, "location /exact")
 			})
 
@@ -98,7 +98,7 @@ var _ = framework.IngressNginxDescribe("[Ingress] [PathType] exact", func() {
 		f.WaitForNginxServer(host,
 			func(server string) bool {
 				return strings.Contains(server, host) &&
-					strings.Contains(server, "location = /exact") &&
+					strings.Contains(server, "location ~ ^/exact$") &&
 					strings.Contains(server, "location /exact")
 			})
 

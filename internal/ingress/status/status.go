@@ -34,7 +34,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/wait"
 	clientset "k8s.io/client-go/kubernetes"
-	"k8s.io/kubernetes/pkg/kubelet/util/sliceutils"
 
 	"k8s.io/ingress-nginx/internal/ingress"
 	"k8s.io/ingress-nginx/internal/k8s"
@@ -193,8 +192,22 @@ func (s *statusSync) runningAddresses() ([]string, error) {
 			continue
 		}
 
+		// only Ready pods are valid
+		isPodReady := false
+		for _, cond := range pod.Status.Conditions {
+			if cond.Type == apiv1.PodReady && cond.Status == apiv1.ConditionTrue {
+				isPodReady = true
+				break
+			}
+		}
+
+		if !isPodReady {
+			klog.InfoS("POD is not ready", "pod", klog.KObj(&pod), "node", pod.Spec.NodeName)
+			continue
+		}
+
 		name := k8s.GetNodeIPOrName(s.Client, pod.Spec.NodeName, s.UseNodeInternalIP)
-		if !sliceutils.StringInSlice(name, addrs) {
+		if !stringInSlice(name, addrs) {
 			addrs = append(addrs, name)
 		}
 	}
@@ -350,4 +363,15 @@ func statusAddressFromService(service string, kubeClient clientset.Interface) ([
 	}
 
 	return nil, fmt.Errorf("unable to extract IP address/es from service %v", service)
+}
+
+// stringInSlice returns true if s is in list
+func stringInSlice(s string, list []string) bool {
+	for _, v := range list {
+		if v == s {
+			return true
+		}
+	}
+
+	return false
 }

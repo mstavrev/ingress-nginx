@@ -38,11 +38,10 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/rest"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/ingress-nginx/internal/k8s"
 	"k8s.io/klog/v2"
-	"k8s.io/kubernetes/pkg/apis/core"
-	kubeframework "k8s.io/kubernetes/test/e2e/framework"
 )
 
 // RequestScheme define a scheme used in a test request.
@@ -63,7 +62,8 @@ var (
 type Framework struct {
 	BaseName string
 
-	IsIngressV1Ready bool
+	IsIngressV1Ready      bool
+	IsIngressV1Beta1Ready bool
 
 	// A Kubernetes and Service Catalog client
 	KubeClientSet          kubernetes.Interface
@@ -95,13 +95,16 @@ func (f *Framework) BeforeEach() {
 	var err error
 
 	if f.KubeClientSet == nil {
-		f.KubeConfig, err = kubeframework.LoadConfig()
+		f.KubeConfig, err = loadConfig()
 		assert.Nil(ginkgo.GinkgoT(), err, "loading a kubernetes client configuration")
+
+		// TODO: remove after k8s v1.22
+		f.KubeConfig.WarningHandler = rest.NoWarnings{}
+
 		f.KubeClientSet, err = kubernetes.NewForConfig(f.KubeConfig)
 		assert.Nil(ginkgo.GinkgoT(), err, "creating a kubernetes client")
 
-		_, isIngressV1Ready := k8s.NetworkingIngressAvailable(f.KubeClientSet)
-		f.IsIngressV1Ready = isIngressV1Ready
+		_, f.IsIngressV1Beta1Ready, f.IsIngressV1Ready = k8s.NetworkingIngressAvailable(f.KubeClientSet)
 	}
 
 	f.Namespace, err = CreateKubeNamespace(f.BaseName, f.KubeClientSet)
@@ -387,7 +390,7 @@ func getReloadCount(pod *corev1.Pod, namespace string, client kubernetes.Interfa
 
 	reloadCount := 0
 	for _, e := range evnts.Items {
-		if e.Reason == "RELOAD" && e.Type == core.EventTypeNormal {
+		if e.Reason == "RELOAD" && e.Type == corev1.EventTypeNormal {
 			reloadCount++
 		}
 	}
@@ -711,4 +714,14 @@ func Sleep(duration ...time.Duration) {
 	}
 
 	time.Sleep(sleepFor)
+}
+
+func loadConfig() (*restclient.Config, error) {
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	config.UserAgent = "ingress-nginx-e2e"
+	return config, nil
 }

@@ -51,7 +51,7 @@ endif
 
 REGISTRY ?= docker.io/mstavrev
 
-BASE_IMAGE ?= docker.io/mstavrev/nginx:0.110
+BASE_IMAGE ?= docker.io/mstavrev/nginx:0.111
 
 GOARCH=$(ARCH)
 

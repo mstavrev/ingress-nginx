@@ -72,6 +72,12 @@ func buildSimpleClientSet() *testclient.Clientset {
 				},
 				Status: apiv1.PodStatus{
 					Phase: apiv1.PodRunning,
+					Conditions: []apiv1.PodCondition{
+						{
+							Type:   apiv1.PodReady,
+							Status: apiv1.ConditionTrue,
+						},
+					},
 				},
 			},
 			{
@@ -108,6 +114,12 @@ func buildSimpleClientSet() *testclient.Clientset {
 				},
 				Status: apiv1.PodStatus{
 					Phase: apiv1.PodRunning,
+					Conditions: []apiv1.PodCondition{
+						{
+							Type:   apiv1.PodReady,
+							Status: apiv1.ConditionTrue,
+						},
+					},
 				},
 			},
 		}},
@@ -300,9 +312,6 @@ func TestStatusActions(t *testing.T) {
 	if fkSync == nil {
 		t.Fatalf("expected a valid Sync")
 	}
-
-	// assume k8s >= 1.14 as the rest of the test
-	k8s.IsNetworkingIngressAvailable = true
 
 	fk := fkSync.(statusSync)
 

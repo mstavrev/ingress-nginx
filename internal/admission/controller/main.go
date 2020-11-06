@@ -23,6 +23,7 @@ import (
 	admissionv1 "k8s.io/api/admission/v1"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	networking "k8s.io/api/networking/v1beta1"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -43,16 +44,10 @@ type IngressAdmission struct {
 }
 
 var (
-	networkingV1Beta1Resource = metav1.GroupVersionResource{
-		Group:    networking.GroupName,
-		Version:  "v1beta1",
-		Resource: "ingresses",
-	}
-
-	networkingV1Resource = metav1.GroupVersionResource{
-		Group:    networking.GroupName,
-		Version:  "v1",
-		Resource: "ingresses",
+	ingressResource = metav1.GroupVersionKind{
+		Group:   networking.GroupName,
+		Version: "v1beta1",
+		Kind:    "Ingress",
 	}
 )
 
@@ -68,16 +63,16 @@ func (ia *IngressAdmission) HandleAdmission(obj runtime.Object) (runtime.Object,
 		outputVersion = admissionv1beta1.SchemeGroupVersion
 		reviewv1beta1, isv1beta1 := obj.(*admissionv1beta1.AdmissionReview)
 		if !isv1beta1 {
-			return nil, fmt.Errorf("request is not of type apiextensions v1 or v1beta1")
+			return nil, fmt.Errorf("request is not of type AdmissionReview v1 or v1beta1")
 		}
 
 		review = &admissionv1.AdmissionReview{}
 		convertV1beta1AdmissionReviewToAdmissionAdmissionReview(reviewv1beta1, review)
 	}
 
-	if review.Request.Resource != networkingV1Beta1Resource && review.Request.Resource != networkingV1Resource {
+	if !apiequality.Semantic.DeepEqual(review.Request.Kind, ingressResource) {
 		return nil, fmt.Errorf("rejecting admission review because the request does not contain an Ingress resource but %s with name %s in namespace %s",
-			review.Request.Resource.String(), review.Request.Name, review.Request.Namespace)
+			review.Request.Kind.String(), review.Request.Name, review.Request.Namespace)
 	}
 
 	status := &admissionv1.AdmissionResponse{}
@@ -103,7 +98,7 @@ func (ia *IngressAdmission) HandleAdmission(obj runtime.Object) (runtime.Object,
 	}
 
 	if err := ia.Checker.CheckIngress(&ingress); err != nil {
-		klog.ErrorS(err, "invalid ingress configuration", "ingress", review.Request.Name, "namespace", review.Request.Namespace)
+		klog.ErrorS(err, "invalid ingress configuration", "ingress", fmt.Sprintf("%v/%v", review.Request.Name, review.Request.Namespace))
 		status.Allowed = false
 		status.Result = &metav1.Status{
 			Status: metav1.StatusFailure, Code: http.StatusBadRequest, Reason: metav1.StatusReasonBadRequest,
@@ -114,7 +109,7 @@ func (ia *IngressAdmission) HandleAdmission(obj runtime.Object) (runtime.Object,
 		return convertResponse(review, outputVersion), nil
 	}
 
-	klog.InfoS("successfully validated configuration, accepting", "ingress", review.Request.Name, "namespace", review.Request.Namespace)
+	klog.InfoS("successfully validated configuration, accepting", "ingress", fmt.Sprintf("%v/%v", review.Request.Name, review.Request.Namespace))
 	status.Allowed = true
 	review.Response = status
 
