@@ -50,9 +50,10 @@ import (
 )
 
 const (
-	slash         = "/"
-	nonIdempotent = "non_idempotent"
-	defBufferSize = 65535
+	slash                      = "/"
+	nonIdempotent              = "non_idempotent"
+	defBufferSize              = 65535
+	defAuthSigninRedirectParam = "rd"
 )
 
 // TemplateWriter is the interface to render a template
@@ -317,26 +318,16 @@ func locationConfigForLua(l interface{}, a interface{}) string {
 		return "{}"
 	}
 
-	pathType := ""
-	if location.PathType != nil {
-		pathType = fmt.Sprintf("%v", *location.PathType)
-	}
-	if needsRewrite(location) || location.Rewrite.UseRegex {
-		pathType = ""
-	}
-
 	return fmt.Sprintf(`{
 		force_ssl_redirect = %t,
 		ssl_redirect = %t,
 		force_no_ssl_redirect = %t,
 		use_port_in_redirects = %t,
-		path_type = "%v",
 	}`,
 		location.Rewrite.ForceSSLRedirect,
 		location.Rewrite.SSLRedirect,
 		isLocationInLocationList(l, all.Cfg.NoTLSRedirectLocations),
 		location.UsePortInRedirects,
-		pathType,
 	)
 }
 
@@ -417,7 +408,7 @@ func buildLocation(input interface{}, enforceRegex bool) string {
 	}
 
 	if location.PathType != nil && *location.PathType == networkingv1beta1.PathTypeExact {
-		return fmt.Sprintf(`~ ^%s$`, path)
+		return fmt.Sprintf(`= %s`, path)
 	}
 
 	return path
@@ -437,7 +428,13 @@ func buildAuthLocation(input interface{}, globalExternalAuthURL string) string {
 	str := base64.URLEncoding.EncodeToString([]byte(location.Path))
 	// removes "=" after encoding
 	str = strings.Replace(str, "=", "", -1)
-	return fmt.Sprintf("/_external-auth-%v", str)
+
+	pathType := "default"
+	if location.PathType != nil {
+		pathType = fmt.Sprintf("%v", *location.PathType)
+	}
+
+	return fmt.Sprintf("/_external-auth-%v-%v", str, pathType)
 }
 
 // shouldApplyGlobalAuth returns true only in case when ExternalAuth.URL is not set and
@@ -914,18 +911,21 @@ func buildForwardedFor(input interface{}) string {
 	return fmt.Sprintf("$http_%v", ffh)
 }
 
-func buildAuthSignURL(authSignURL string) string {
+func buildAuthSignURL(authSignURL, authRedirectParam string) string {
 	u, _ := url.Parse(authSignURL)
 	q := u.Query()
+	if authRedirectParam == "" {
+		authRedirectParam = defaultGlobalAuthRedirectParam
+	}
 	if len(q) == 0 {
-		return fmt.Sprintf("%v?rd=$pass_access_scheme://$http_host$escaped_request_uri", authSignURL)
+		return fmt.Sprintf("%v?%v=$pass_access_scheme://$http_host$escaped_request_uri", authSignURL, authRedirectParam)
 	}
 
-	if q.Get("rd") != "" {
+	if q.Get(authRedirectParam) != "" {
 		return authSignURL
 	}
 
-	return fmt.Sprintf("%v&rd=$pass_access_scheme://$http_host$escaped_request_uri", authSignURL)
+	return fmt.Sprintf("%v&%v=$pass_access_scheme://$http_host$escaped_request_uri", authSignURL, authRedirectParam)
 }
 
 func buildAuthSignURLLocation(location, authSignURL string) string {

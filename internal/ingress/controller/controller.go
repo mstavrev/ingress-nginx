@@ -154,7 +154,7 @@ func (n *NGINXController) syncIngress(interface{}) error {
 			n.metricCollector.IncReloadErrorCount()
 			n.metricCollector.ConfigSuccess(hash, false)
 			klog.Errorf("Unexpected failure reloading the backend:\n%v", err)
-			n.recorder.Eventf(k8s.IngressNGINXPod, apiv1.EventTypeWarning, "RELOAD", fmt.Sprintf("Error reloading NGINX: %v", err))
+			n.recorder.Eventf(k8s.IngressPodDetails, apiv1.EventTypeWarning, "RELOAD", fmt.Sprintf("Error reloading NGINX: %v", err))
 			return err
 		}
 
@@ -162,7 +162,7 @@ func (n *NGINXController) syncIngress(interface{}) error {
 		n.metricCollector.ConfigSuccess(hash, true)
 		n.metricCollector.IncReloadCount()
 
-		n.recorder.Eventf(k8s.IngressNGINXPod, apiv1.EventTypeNormal, "RELOAD", "NGINX reload triggered due to a change in configuration")
+		n.recorder.Eventf(k8s.IngressPodDetails, apiv1.EventTypeNormal, "RELOAD", "NGINX reload triggered due to a change in configuration")
 	}
 
 	isFirstSync := n.runningConfig.Equal(&ingress.Configuration{})
@@ -430,6 +430,20 @@ func (n *NGINXController) getConfiguration(ingresses []*ingress.Ingress) (sets.S
 	hosts := sets.NewString()
 
 	for _, server := range servers {
+		// If a location is defined by a prefix string that ends with the slash character, and requests are processed by one of
+		// proxy_pass, fastcgi_pass, uwsgi_pass, scgi_pass, memcached_pass, or grpc_pass, then the special processing is performed.
+		// In response to a request with URI equal to // this string, but without the trailing slash, a permanent redirect with the
+		// code 301 will be returned to the requested URI with the slash appended. If this is not desired, an exact match of the
+		// URIand location could be defined like this:
+		//
+		// location /user/ {
+		//     proxy_pass http://user.example.com;
+		// }
+		// location = /user {
+		//     proxy_pass http://login.example.com;
+		// }
+		server.Locations = updateServerLocations(server.Locations)
+
 		if !hosts.Has(server.Hostname) {
 			hosts.Insert(server.Hostname)
 		}

@@ -440,6 +440,8 @@ Additionally it is possible to set:
   `<Method>` to specify the HTTP method to use.
 * `nginx.ingress.kubernetes.io/auth-signin`:
   `<SignIn_URL>` to specify the location of the error page.
+* `nginx.ingress.kubernetes.io/auth-signin-redirect-param`:
+  `<SignIn_URL>` to specify the URL parameter in the error page which should contain the original URL for a failed signin request.
 * `nginx.ingress.kubernetes.io/auth-response-headers`:
   `<Response_Header_1, ..., Response_Header_n>` to specify headers to pass to backend once authentication request completes.
 * `nginx.ingress.kubernetes.io/auth-proxy-set-headers`:
@@ -492,7 +494,7 @@ The client IP address will be set based on the use of [PROXY protocol](./configm
 
 ### Permanent Redirect
 
-This annotation allows to return a permanent redirect instead of sending data to the upstream.  For example `nginx.ingress.kubernetes.io/permanent-redirect: https://www.google.com` would redirect everything to Google.
+This annotation allows to return a permanent redirect (Return Code 301) instead of sending data to the upstream.  For example `nginx.ingress.kubernetes.io/permanent-redirect: https://www.google.com` would redirect everything to Google.
 
 ### Permanent Redirect Code
 
