@@ -21,7 +21,7 @@ DIR:=$(strip $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST)))))
 INIT_BUILDX=$(DIR)/../../hack/init-buildx.sh
 
 # 0.0.0 shouldn't clobber any released builds
-TAG ?= 0.111
+TAG ?= 0.112
 REGISTRY ?= docker.io/mstavrev
 
 IMAGE = $(REGISTRY)/nginx
