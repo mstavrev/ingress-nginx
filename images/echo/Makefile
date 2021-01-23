@@ -36,7 +36,7 @@ build: ensure-buildx
 		--platform=${PLATFORMS} $(OUTPUT) \
 		--progress=$(PROGRESS) \
 		--pull \
-		--build-arg BASE_IMAGE=k8s.gcr.io/ingress-nginx/nginx:v20201028-g2c1279cd8@sha256:bd22e4f9bbf88aee527a86692be4442d03fa1ef2df94356312c9db8bec1f7ea3 \
+		--build-arg BASE_IMAGE=k8s.gcr.io/ingress-nginx/nginx:v20210104-g2254a9186@sha256:edd1d06bc6892b0dfb42de7d782ceb3c50eec843b09024abf3f95ba23f4feed5 \
 		--build-arg LUAROCKS_VERSION=3.3.1 \
 		--build-arg LUAROCKS_SHA=837481e408f7c06b59befe7ec194537c657687d624894bca7f79034302141a34 \
 		-t $(IMAGE):$(TAG) rootfs

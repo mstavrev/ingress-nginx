@@ -52,7 +52,7 @@ func (f *Framework) NewEchoDeploymentWithReplicas(replicas int) {
 // replicas is configurable and
 // name is configurable
 func (f *Framework) NewEchoDeploymentWithNameAndReplicas(name string, replicas int) {
-	deployment := newDeployment(name, f.Namespace, "k8s.gcr.io/ingress-nginx/e2e-test-echo@sha256:41c043188a499d460e7425883a3b196e13f10bf40c395895dbdf06caf3324536", 80, int32(replicas),
+	deployment := newDeployment(name, f.Namespace, "k8s.gcr.io/ingress-nginx/e2e-test-echo@sha256:d34944a61a65382e9a81f5e28e981187b419b9d579322277c5a98c2857fd7c5e", 80, int32(replicas),
 		nil,
 		[]corev1.VolumeMount{},
 		[]corev1.Volume{},
@@ -139,7 +139,7 @@ func (f *Framework) NGINXWithConfigDeployment(name string, cfg string) {
 	}, metav1.CreateOptions{})
 	assert.Nil(ginkgo.GinkgoT(), err, "creating configmap")
 
-	deployment := newDeployment(name, f.Namespace, "k8s.gcr.io/ingress-nginx/nginx:v20201028-g2c1279cd8@sha256:bd22e4f9bbf88aee527a86692be4442d03fa1ef2df94356312c9db8bec1f7ea3", 80, 1,
+	deployment := newDeployment(name, f.Namespace, "k8s.gcr.io/ingress-nginx/nginx:v20210104-g2254a9186@sha256:edd1d06bc6892b0dfb42de7d782ceb3c50eec843b09024abf3f95ba23f4feed5", 80, 1,
 		nil,
 		[]corev1.VolumeMount{
 			{

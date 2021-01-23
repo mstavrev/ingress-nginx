@@ -215,7 +215,8 @@ func (f *Framework) updateIngressNGINXPod() error {
 	return err
 }
 
-// WaitForNginxServer waits until the nginx configuration contains a particular server section
+// WaitForNginxServer waits until the nginx configuration contains a particular server section.
+// `cfg` passed to matcher is normalized by replacing all tabs and spaces with single space.
 func (f *Framework) WaitForNginxServer(name string, matcher func(cfg string) bool) {
 	err := wait.Poll(Poll, DefaultTimeout, f.matchNginxConditions(name, matcher))
 	assert.Nil(ginkgo.GinkgoT(), err, "waiting for nginx server condition/s")
@@ -223,6 +224,7 @@ func (f *Framework) WaitForNginxServer(name string, matcher func(cfg string) boo
 }
 
 // WaitForNginxConfiguration waits until the nginx configuration contains a particular configuration
+// `cfg` passed to matcher is normalized by replacing all tabs and spaces with single space.
 func (f *Framework) WaitForNginxConfiguration(matcher func(cfg string) bool) {
 	err := wait.Poll(Poll, DefaultTimeout, f.matchNginxConditions("", matcher))
 	assert.Nil(ginkgo.GinkgoT(), err, "waiting for nginx server condition/s")
@@ -293,10 +295,6 @@ func (f *Framework) matchNginxCustomConditions(from string, to string, matcher f
 	}
 }
 
-func (f *Framework) getNginxConfigMap() (*v1.ConfigMap, error) {
-	return f.getConfigMap("nginx-ingress-controller")
-}
-
 func (f *Framework) getConfigMap(name string) (*v1.ConfigMap, error) {
 	if f.KubeClientSet == nil {
 		return nil, fmt.Errorf("KubeClientSet not initialized")
@@ -329,7 +327,7 @@ func (f *Framework) SetNginxConfigMapData(cmData map[string]string) {
 		assert.Nil(ginkgo.GinkgoT(), err, "updating configuration configmap")
 	}
 
-	f.waitForReload(fn)
+	f.WaitForReload(fn)
 }
 
 // CreateConfigMap creates a new configmap in the current namespace
@@ -360,10 +358,12 @@ func (f *Framework) UpdateNginxConfigMapData(key string, value string) {
 		assert.Nil(ginkgo.GinkgoT(), err, "updating configuration configmap")
 	}
 
-	f.waitForReload(fn)
+	f.WaitForReload(fn)
 }
 
-func (f *Framework) waitForReload(fn func()) {
+// WaitForReload calls the passed function and
+// asser it has caused at least 1 reload.
+func (f *Framework) WaitForReload(fn func()) {
 	initialReloadCount := getReloadCount(f.pod, f.Namespace, f.KubeClientSet)
 
 	fn()
@@ -385,11 +385,11 @@ func (f *Framework) waitForReload(fn func()) {
 }
 
 func getReloadCount(pod *corev1.Pod, namespace string, client kubernetes.Interface) int {
-	evnts, err := client.CoreV1().Events(namespace).Search(scheme.Scheme, pod)
+	events, err := client.CoreV1().Events(namespace).Search(scheme.Scheme, pod)
 	assert.Nil(ginkgo.GinkgoT(), err, "obtaining NGINX Pod")
 
 	reloadCount := 0
-	for _, e := range evnts.Items {
+	for _, e := range events.Items {
 		if e.Reason == "RELOAD" && e.Type == corev1.EventTypeNormal {
 			reloadCount++
 		}

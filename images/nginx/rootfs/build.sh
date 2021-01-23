@@ -18,7 +18,7 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-export NGINX_VERSION=1.19.5
+export NGINX_VERSION=1.19.6
 export NDK_VERSION=0.3.1
 export SETMISC_VERSION=0.32
 export MORE_HEADERS_VERSION=0.33
@@ -33,7 +33,7 @@ export DATADOG_CPP_VERSION=1.2.0
 export MODSECURITY_VERSION=22e53aba4e3ae8c7d59a3672d6727e49246afe96
 export MODSECURITY_LIB_VERSION=v3.0.4
 export OWASP_MODSECURITY_CRS_VERSION=v3.3.0
-export LUA_NGX_VERSION=0.10.19
+export LUA_NGX_VERSION=138c1b96423aa26defe00fe64dd5760ef17e5ad8
 export LUA_STREAM_NGX_VERSION=0.0.9
 export LUA_UPSTREAM_VERSION=0.07
 export LUA_CJSON_VERSION=2.1.0.8
@@ -52,6 +52,10 @@ export LUA_RESTY_HTTP=0.15
 export LUA_RESTY_LOCK=0.08
 export LUA_RESTY_UPLOAD_VERSION=0.10
 export LUA_RESTY_STRING_VERSION=0.12
+export LUA_RESTY_MEMCACHED_VERSION=0.15
+export LUA_RESTY_REDIS_VERSION=0.29
+export LUA_RESTY_IPMATCHER_VERSION=1a0a1c58fd085b15eedee58de8b5f45c27aff7bc
+export LUA_RESTY_GLOBAL_THROTTLE_VERSION=0.2.0
 
 export BUILD_PATH=/tmp/build
 
@@ -70,9 +74,6 @@ get_src()
   tar xzf "$f"
   rm -rf "$f"
 }
-
-apk update
-apk upgrade
 
 # install required packages to build
 apk add \
@@ -110,7 +111,8 @@ apk add \
   bc \
   unzip \
   dos2unix \
-  yaml-cpp
+  yaml-cpp \
+  coreutils
 
 mkdir -p /etc/nginx
 
@@ -118,7 +120,7 @@ mkdir --verbose -p "$BUILD_PATH"
 cd "$BUILD_PATH"
 
 # download, verify and extract the source files
-get_src 5c0a46afd6c452d4443f6ec0767f4d5c3e7c499e55a60cd6542b35a61eda799c \
+get_src b11195a02b1d3285ddf2987e02c6b6d28df41bb1b1dd25f33542848ef4fc33b5 \
         "https://nginx.org/download/nginx-$NGINX_VERSION.tar.gz"
 
 get_src 0e971105e210d272a497567fa2e2c256f4e39b845a5ba80d373e26ba1abfbd85 \
@@ -154,8 +156,8 @@ get_src 21257af93a64fee42c04ca6262d292b2e4e0b7b0660c511db357b32fd42ef5d3 \
 get_src 464f46744a6be778626d11452c4db3c2d09461080c6db42e358e21af19d542f6 \
         "https://github.com/msgpack/msgpack-c/archive/cpp-$MSGPACK_VERSION.tar.gz"
 
-get_src 242d60b97eb7459cd0c0d58083cf7f3195d46181829da45ab8b09a857bb0ed01 \
-        "https://github.com/openresty/lua-nginx-module/archive/v$LUA_NGX_VERSION.tar.gz"
+get_src 7dc05df3d1824b02c6958ff37f9e682b73c1737dcfee93212ca3f6c5bfae08f3 \
+        "https://github.com/openresty/lua-nginx-module/archive/$LUA_NGX_VERSION.tar.gz"
 
 get_src 6fcf7054f412a19c23c1ac3c0663f42f40bccc907d98c5d1657ae5cab9973ee9 \
         "https://github.com/openresty/stream-lua-nginx-module/archive/v$LUA_STREAM_NGX_VERSION.tar.gz"
@@ -208,6 +210,17 @@ get_src 4aca34f324d543754968359672dcf5f856234574ee4da360ce02c778d244572a \
 get_src 987d5754a366d3ccbf745d2765f82595dcff5b94ba6c755eeb6d310447996f32 \
         "https://github.com/ledgetech/lua-resty-http/archive/v$LUA_RESTY_HTTP.tar.gz"
 
+get_src 8257e8fbf78eb2cc2cf2fdca2fda3c2e755f7d3222e7d15cc322111a0f720f9c \
+        "https://github.com/openresty/lua-resty-memcached/archive/v$LUA_RESTY_MEMCACHED_VERSION.tar.gz"
+
+get_src 3f602af507aacd1f7aaeddfe7b77627fcde095fe9f115cb9d6ad8de2a52520e1 \
+        "https://github.com/openresty/lua-resty-redis/archive/v$LUA_RESTY_REDIS_VERSION.tar.gz"
+
+get_src d0eacda122ab36585936256cb222ea9147bc5ad1fc3f24fd3748475653dd27ad \
+        "https://github.com/api7/lua-resty-ipmatcher/archive/$LUA_RESTY_IPMATCHER_VERSION.tar.gz"
+
+get_src 0fb790e394510e73fdba1492e576aaec0b8ee9ef08e3e821ce253a07719cf7ea \
+        "https://github.com/ElvinEfendi/lua-resty-global-throttle/archive/v$LUA_RESTY_GLOBAL_THROTTLE_VERSION.tar.gz"
 
 # improve compilation times
 CORES=$(($(grep -c ^processor /proc/cpuinfo) - 1))
@@ -566,6 +579,18 @@ cd "$BUILD_PATH/lua-resty-upload-$LUA_RESTY_UPLOAD_VERSION"
 make install
 
 cd "$BUILD_PATH/lua-resty-string-$LUA_RESTY_STRING_VERSION"
+make install
+
+cd "$BUILD_PATH/lua-resty-memcached-$LUA_RESTY_MEMCACHED_VERSION"
+make install
+
+cd "$BUILD_PATH/lua-resty-redis-$LUA_RESTY_REDIS_VERSION"
+make install
+
+cd "$BUILD_PATH/lua-resty-ipmatcher-$LUA_RESTY_IPMATCHER_VERSION"
+INST_LUADIR=/usr/local/lib/lua make install
+
+cd "$BUILD_PATH/lua-resty-global-throttle-$LUA_RESTY_GLOBAL_THROTTLE_VERSION"
 make install
 
 # mimalloc

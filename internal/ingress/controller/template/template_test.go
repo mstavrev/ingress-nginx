@@ -86,7 +86,7 @@ var (
 			true,
 			false,
 		},
-		"when secure backend, stickeness and dynamic config enabled": {
+		"when secure backend, stickiness and dynamic config enabled": {
 			"/",
 			"/",
 			"/",
@@ -874,10 +874,10 @@ func TestEscapeLiteralDollar(t *testing.T) {
 		t.Errorf("Expected %v but returned %v", expected, escapedPath)
 	}
 
-	leaveUnchagned := "/leave-me/unchagned"
-	escapedPath = escapeLiteralDollar(leaveUnchagned)
-	if escapedPath != leaveUnchagned {
-		t.Errorf("Expected %v but returned %v", leaveUnchagned, escapedPath)
+	leaveUnchanged := "/leave-me/unchanged"
+	escapedPath = escapeLiteralDollar(leaveUnchanged)
+	if escapedPath != leaveUnchanged {
+		t.Errorf("Expected %v but returned %v", leaveUnchanged, escapedPath)
 	}
 
 	escapedPath = escapeLiteralDollar(false)
@@ -1469,6 +1469,89 @@ func TestBuildServerName(t *testing.T) {
 		result := buildServerName(testCase.hostname)
 		if result != testCase.expected {
 			t.Errorf("%v: expected '%v' but returned '%v'", testCase.title, testCase.expected, result)
+		}
+	}
+}
+
+func TestParseComplexNginxVarIntoLuaTable(t *testing.T) {
+	testCases := []struct {
+		ngxVar           string
+		expectedLuaTable string
+	}{
+		{"foo", `{ { nil, nil, nil, "foo", }, }`},
+		{"$foo", `{ { nil, nil, "foo", nil, }, }`},
+		{"${foo}", `{ { nil, "foo", nil, nil, }, }`},
+		{"\\$foo", `{ { "\$foo", nil, nil, nil, }, }`},
+		{
+			"foo\\$bar$baz${daz}xiyar$pomidor",
+			`{ { nil, nil, nil, "foo", }, { "\$bar", nil, nil, nil, }, { nil, nil, "baz", nil, }, ` +
+				`{ nil, "daz", nil, nil, }, { nil, nil, nil, "xiyar", }, { nil, nil, "pomidor", nil, }, }`,
+		},
+	}
+
+	for _, testCase := range testCases {
+		actualLuaTable := parseComplexNginxVarIntoLuaTable(testCase.ngxVar)
+		if actualLuaTable != testCase.expectedLuaTable {
+			t.Errorf("expected %v but returned %v", testCase.expectedLuaTable, actualLuaTable)
+		}
+	}
+}
+
+func TestConvertGoSliceIntoLuaTablet(t *testing.T) {
+	testCases := []struct {
+		title            string
+		goSlice          interface{}
+		emptyStringAsNil bool
+		expectedLuaTable string
+		expectedErr      error
+	}{
+		{
+			"flat string slice",
+			[]string{"one", "two", "three"},
+			false,
+			`{ "one", "two", "three", }`,
+			nil,
+		},
+		{
+			"nested string slice",
+			[][]string{{"one", "", "three"}, {"foo", "bar"}},
+			false,
+			`{ { "one", "", "three", }, { "foo", "bar", }, }`,
+			nil,
+		},
+		{
+			"converts empty string to nil when enabled",
+			[][]string{{"one", "", "three"}, {"foo", "bar"}},
+			true,
+			`{ { "one", nil, "three", }, { "foo", "bar", }, }`,
+			nil,
+		},
+		{
+			"boolean slice",
+			[]bool{true, true, false},
+			false,
+			`{ true, true, false, }`,
+			nil,
+		},
+		{
+			"integer slice",
+			[]int{4, 3, 6},
+			false,
+			`{ 4, 3, 6, }`,
+			nil,
+		},
+	}
+
+	for _, testCase := range testCases {
+		actualLuaTable, err := convertGoSliceIntoLuaTable(testCase.goSlice, testCase.emptyStringAsNil)
+		if testCase.expectedErr != nil && err != nil && testCase.expectedErr.Error() != err.Error() {
+			t.Errorf("expected error '%v' but returned '%v'", testCase.expectedErr, err)
+		}
+		if testCase.expectedErr == nil && err != nil {
+			t.Errorf("expected error to be nil but returned '%v'", err)
+		}
+		if testCase.expectedLuaTable != actualLuaTable {
+			t.Errorf("%v: expected '%v' but returned '%v'", testCase.title, testCase.expectedLuaTable, actualLuaTable)
 		}
 	}
 }

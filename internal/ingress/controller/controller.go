@@ -232,6 +232,17 @@ func (n *NGINXController) CheckIngress(ing *networking.Ingress) error {
 
 	k8s.SetDefaultNGINXPathType(ing)
 
+	cfg := n.store.GetBackendConfiguration()
+	cfg.Resolver = n.resolver
+
+	if len(cfg.GlobalRateLimitMemcachedHost) == 0 {
+		for key := range ing.ObjectMeta.GetAnnotations() {
+			if strings.HasPrefix(key, fmt.Sprintf("%s/%s", parser.AnnotationsPrefix, "global-rate-limit")) {
+				return fmt.Errorf("'global-rate-limit*' annotations require 'global-rate-limit-memcached-host' settings configured in the global configmap")
+			}
+		}
+	}
+
 	allIngresses := n.store.ListIngresses()
 
 	filter := func(toCheck *ingress.Ingress) bool {
@@ -243,9 +254,6 @@ func (n *NGINXController) CheckIngress(ing *networking.Ingress) error {
 		Ingress:           *ing,
 		ParsedAnnotations: annotations.NewAnnotationExtractor(n.store).Extract(ing),
 	})
-
-	cfg := n.store.GetBackendConfiguration()
-	cfg.Resolver = n.resolver
 
 	_, servers, pcfg := n.getConfiguration(ings)
 
@@ -301,7 +309,7 @@ func (n *NGINXController) getStreamServices(configmapName string, proto apiv1.Pr
 		nginx.StreamPort,
 	}
 
-	reserverdPorts := sets.NewInt(rp...)
+	reservedPorts := sets.NewInt(rp...)
 	// svcRef format: <(str)namespace>/<(str)service>:<(intstr)port>[:<("PROXY")decode>:<("PROXY")encode>]
 	for port, svcRef := range configmap.Data {
 		externalPort, err := strconv.Atoi(port) // #nosec
@@ -309,7 +317,7 @@ func (n *NGINXController) getStreamServices(configmapName string, proto apiv1.Pr
 			klog.Warningf("%q is not a valid %v port number", port, proto)
 			continue
 		}
-		if reserverdPorts.Has(externalPort) {
+		if reservedPorts.Has(externalPort) {
 			klog.Warningf("Port %d cannot be used for %v stream services. It is reserved for the Ingress controller.", externalPort, proto)
 			continue
 		}
@@ -651,6 +659,15 @@ func (n *NGINXController) getBackendServers(ingresses []*ingress.Ingress) ([]*in
 						locs[host] = []string{}
 					}
 					locs[host] = append(locs[host], path.Path)
+
+					if len(server.Aliases) > 0 {
+						for _, alias := range server.Aliases {
+							if _, ok := locs[alias]; !ok {
+								locs[alias] = []string{}
+							}
+							locs[alias] = append(locs[alias], path.Path)
+						}
+					}
 				}
 			}
 		}
@@ -1244,6 +1261,7 @@ func locationApplyAnnotations(loc *ingress.Location, anns *annotations.Ingress) 
 	loc.Proxy = anns.Proxy
 	loc.ProxySSL = anns.ProxySSL
 	loc.RateLimit = anns.RateLimit
+	loc.GlobalRateLimit = anns.GlobalRateLimit
 	loc.Redirect = anns.Redirect
 	loc.Rewrite = anns.Rewrite
 	loc.UpstreamVhost = anns.UpstreamVhost
@@ -1442,7 +1460,7 @@ func extractTLSSecretName(host string, ing *ingress.Ingress,
 	return ""
 }
 
-// getRemovedHosts returns a list of the hostsnames
+// getRemovedHosts returns a list of the hostnames
 // that are not associated anymore to the NGINX configuration.
 func getRemovedHosts(rucfg, newcfg *ingress.Configuration) []string {
 	old := sets.NewString()

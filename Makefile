@@ -51,7 +51,7 @@ endif
 
 REGISTRY ?= docker.io/mstavrev
 
-BASE_IMAGE ?= docker.io/mstavrev/nginx:0.112
+BASE_IMAGE ?= docker.io/mstavrev/nginx:0.113
 
 GOARCH=$(ARCH)
 
@@ -164,10 +164,12 @@ dev-env-stop: ## Deletes local Kubernetes cluster created by kind.
 
 .PHONY: live-docs
 live-docs: ## Build and launch a local copy of the documentation website in http://localhost:8000
+	@docker build -t ingress-nginx-docs .github/actions/mkdocs
 	@docker run --rm -it \
 		-p 8000:8000 \
 		-v ${PWD}:/docs \
-		squidfunk/mkdocs-material:5.5.12
+		--entrypoint mkdocs \
+		ingress-nginx-docs serve --dev-addr=0.0.0.0:8000
 
 .PHONY: misspell
 misspell:  ## Check for spelling errors.
