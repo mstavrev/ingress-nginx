@@ -367,6 +367,8 @@ func (n *NGINXController) Stop() error {
 		return fmt.Errorf("shutdown already in progress")
 	}
 
+	time.Sleep(time.Duration(n.cfg.ShutdownGracePeriod) * time.Second)
+
 	klog.InfoS("Shutting down controller queues")
 	close(n.stopCh)
 	go n.syncQueue.Shutdown()
@@ -1096,6 +1098,9 @@ func cleanTempNginxCfg() error {
 	var files []string
 
 	err := filepath.Walk(os.TempDir(), func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
 		if info.IsDir() && os.TempDir() != path {
 			return filepath.SkipDir
 		}
