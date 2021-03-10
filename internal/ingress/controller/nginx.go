@@ -1039,6 +1039,7 @@ const jaegerTmpl = `{
 	"samplingServerURL": "{{ .JaegerSamplerHost }}:{{ .JaegerSamplerPort }}/sampling"
   },
   "reporter": {
+	"endpoint": "{{ .JaegerEndpoint }}",
 	"localAgentHostPort": "{{ .JaegerCollectorHost }}:{{ .JaegerCollectorPort }}"
   },
   "headers": {
@@ -1046,7 +1047,7 @@ const jaegerTmpl = `{
 	"jaegerDebugHeader": "{{ .JaegerDebugHeader }}",
 	"jaegerBaggageHeader": "{{ .JaegerBaggageHeader }}",
 	"traceBaggageHeaderPrefix": "{{ .JaegerTraceBaggageHeaderPrefix }}"
-  },
+  }
 }`
 
 const datadogTmpl = `{
@@ -1068,7 +1069,7 @@ func createOpentracingCfg(cfg ngx_config.Configuration) error {
 		if err != nil {
 			return err
 		}
-	} else if cfg.JaegerCollectorHost != "" {
+	} else if cfg.JaegerCollectorHost != "" || cfg.JaegerEndpoint != "" {
 		tmpl, err = template.New("jaeger").Parse(jaegerTmpl)
 		if err != nil {
 			return err
