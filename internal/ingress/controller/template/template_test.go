@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	"path"
@@ -32,9 +31,8 @@ import (
 	jsoniter "github.com/json-iterator/go"
 	"github.com/pmezard/go-difflib/difflib"
 	apiv1 "k8s.io/api/core/v1"
-	networking "k8s.io/api/networking/v1beta1"
+	networking "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"k8s.io/ingress-nginx/internal/ingress"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/authreq"
@@ -57,21 +55,25 @@ func init() {
 }
 
 var (
+	pathPrefix networking.PathType = networking.PathTypePrefix
+
 	// TODO: add tests for SSLPassthrough
 	tmplFuncTestcases = map[string]struct {
-		Path             string
-		Target           string
-		Location         string
-		ProxyPass        string
-		Sticky           bool
-		XForwardedPrefix string
-		SecureBackend    bool
-		enforceRegex     bool
+		Path              string
+		Target            string
+		Location          string
+		ProxyPass         string
+		AutoHttpProxyPass string
+		Sticky            bool
+		XForwardedPrefix  string
+		SecureBackend     bool
+		enforceRegex      bool
 	}{
 		"when secure backend enabled": {
 			"/",
 			"/",
 			"/",
+			"proxy_pass https://upstream_balancer;",
 			"proxy_pass https://upstream_balancer;",
 			false,
 			"",
@@ -83,6 +85,7 @@ var (
 			"/",
 			"/",
 			"proxy_pass https://upstream_balancer;",
+			"proxy_pass https://upstream_balancer;",
 			false,
 			"",
 			true,
@@ -92,6 +95,7 @@ var (
 			"/",
 			"/",
 			"/",
+			"proxy_pass https://upstream_balancer;",
 			"proxy_pass https://upstream_balancer;",
 			true,
 			"",
@@ -103,6 +107,7 @@ var (
 			"/",
 			"/",
 			"proxy_pass http://upstream_balancer;",
+			"proxy_pass $scheme://upstream_balancer;",
 			false,
 			"",
 			false,
@@ -113,6 +118,7 @@ var (
 			"/",
 			"/",
 			"proxy_pass http://upstream_balancer;",
+			"proxy_pass $scheme://upstream_balancer;",
 			false,
 			"",
 			false,
@@ -125,6 +131,9 @@ var (
 			`
 rewrite "(?i)/" /jenkins break;
 proxy_pass http://upstream_balancer;`,
+			`
+rewrite "(?i)/" /jenkins break;
+proxy_pass $scheme://upstream_balancer;`,
 			false,
 			"",
 			false,
@@ -137,6 +146,9 @@ proxy_pass http://upstream_balancer;`,
 			`
 rewrite "(?i)/" /something break;
 proxy_pass http://upstream_balancer;`,
+			`
+rewrite "(?i)/" /something break;
+proxy_pass $scheme://upstream_balancer;`,
 			true,
 			"",
 			false,
@@ -149,6 +161,9 @@ proxy_pass http://upstream_balancer;`,
 			`
 rewrite "(?i)/" /something break;
 proxy_pass http://upstream_balancer;`,
+			`
+rewrite "(?i)/" /something break;
+proxy_pass $scheme://upstream_balancer;`,
 			true,
 			"",
 			false,
@@ -162,6 +177,10 @@ proxy_pass http://upstream_balancer;`,
 rewrite "(?i)/there" /something break;
 proxy_set_header X-Forwarded-Prefix "/there";
 proxy_pass http://upstream_balancer;`,
+			`
+rewrite "(?i)/there" /something break;
+proxy_set_header X-Forwarded-Prefix "/there";
+proxy_pass $scheme://upstream_balancer;`,
 			true,
 			"/there",
 			false,
@@ -172,6 +191,7 @@ proxy_pass http://upstream_balancer;`,
 			"/something",
 			`~* "^/something"`,
 			"proxy_pass http://upstream_balancer;",
+			"proxy_pass $scheme://upstream_balancer;",
 			false,
 			"",
 			false,
@@ -195,7 +215,7 @@ func TestBuildLuaSharedDictionaries(t *testing.T) {
 	// config lua dict
 	cfg := config.Configuration{
 		LuaSharedDicts: map[string]int{
-			"configuration_data": 10, "certificate_data": 20,
+			"configuration_data": 10240, "certificate_data": 20480,
 		},
 	}
 	actual := buildLuaSharedDictionaries(cfg, invalidType)
@@ -207,11 +227,11 @@ func TestBuildLuaSharedDictionaries(t *testing.T) {
 	servers := []*ingress.Server{
 		{
 			Hostname:  "foo.bar",
-			Locations: []*ingress.Location{{Path: "/"}},
+			Locations: []*ingress.Location{{Path: "/", PathType: &pathPrefix}},
 		},
 		{
 			Hostname:  "another.host",
-			Locations: []*ingress.Location{{Path: "/"}},
+			Locations: []*ingress.Location{{Path: "/", PathType: &pathPrefix}},
 		},
 	}
 	// returns value from config
@@ -236,13 +256,13 @@ func TestBuildLuaSharedDictionaries(t *testing.T) {
 func TestLuaConfigurationRequestBodySize(t *testing.T) {
 	cfg := config.Configuration{
 		LuaSharedDicts: map[string]int{
-			"configuration_data": 10, "certificate_data": 20,
+			"configuration_data": 10240, "certificate_data": 20480,
 		},
 	}
 
 	size := luaConfigurationRequestBodySize(cfg)
-	if size != "21" {
-		t.Errorf("expected the size to be 20 but got: %v", size)
+	if size != "21M" {
+		t.Errorf("expected the size to be 21M but got: %v", size)
 	}
 }
 
@@ -293,8 +313,9 @@ func TestBuildLocation(t *testing.T) {
 
 	for k, tc := range tmplFuncTestcases {
 		loc := &ingress.Location{
-			Path:    tc.Path,
-			Rewrite: rewrite.Config{Target: tc.Target},
+			Path:     tc.Path,
+			PathType: &pathPrefix,
+			Rewrite:  rewrite.Config{Target: tc.Target},
 		}
 
 		newLoc := buildLocation(loc, tc.enforceRegex)
@@ -311,6 +332,7 @@ func TestBuildProxyPass(t *testing.T) {
 	for k, tc := range tmplFuncTestcases {
 		loc := &ingress.Location{
 			Path:             tc.Path,
+			PathType:         &pathPrefix,
 			Rewrite:          rewrite.Config{Target: tc.Target},
 			Backend:          defaultBackend,
 			XForwardedPrefix: tc.XForwardedPrefix,
@@ -339,6 +361,48 @@ func TestBuildProxyPass(t *testing.T) {
 
 		pp := buildProxyPass(defaultHost, backends, loc)
 		if !strings.EqualFold(tc.ProxyPass, pp) {
+			t.Errorf("%s: expected \n'%v'\nbut returned \n'%v'", k, tc.ProxyPass, pp)
+		}
+	}
+}
+
+func TestBuildProxyPassAutoHttp(t *testing.T) {
+	defaultBackend := "upstream-name"
+	defaultHost := "example.com"
+
+	for k, tc := range tmplFuncTestcases {
+		loc := &ingress.Location{
+			Path:             tc.Path,
+			Rewrite:          rewrite.Config{Target: tc.Target},
+			Backend:          defaultBackend,
+			XForwardedPrefix: tc.XForwardedPrefix,
+		}
+
+		if tc.SecureBackend {
+			loc.BackendProtocol = "HTTPS"
+		} else {
+			loc.BackendProtocol = "AUTO_HTTP"
+		}
+
+		backend := &ingress.Backend{
+			Name: defaultBackend,
+		}
+
+		if tc.Sticky {
+			backend.SessionAffinity = ingress.SessionAffinityConfig{
+				AffinityType: "cookie",
+				CookieSessionAffinity: ingress.CookieSessionAffinity{
+					Locations: map[string][]string{
+						defaultHost: {tc.Path},
+					},
+				},
+			}
+		}
+
+		backends := []*ingress.Backend{backend}
+
+		pp := buildProxyPass(defaultHost, backends, loc)
+		if !strings.EqualFold(tc.AutoHttpProxyPass, pp) {
 			t.Errorf("%s: expected \n'%v'\nbut returned \n'%v'", k, tc.ProxyPass, pp)
 		}
 	}
@@ -445,7 +509,7 @@ func TestBuildAuthResponseHeaders(t *testing.T) {
 		"proxy_set_header 'H-With-Caps-And-Dashes' $authHeader1;",
 	}
 
-	headers := buildAuthResponseHeaders(externalAuthResponseHeaders)
+	headers := buildAuthResponseHeaders(proxySetHeader(nil), externalAuthResponseHeaders)
 
 	if !reflect.DeepEqual(expected, headers) {
 		t.Errorf("Expected \n'%v'\nbut returned \n'%v'", expected, headers)
@@ -476,7 +540,7 @@ func TestTemplateWithData(t *testing.T) {
 		t.Errorf("unexpected error reading json file: %v", err)
 	}
 	defer f.Close()
-	data, err := ioutil.ReadFile(f.Name())
+	data, err := os.ReadFile(f.Name())
 	if err != nil {
 		t.Error("unexpected error reading json file: ", err)
 	}
@@ -520,7 +584,7 @@ func BenchmarkTemplateWithData(b *testing.B) {
 		b.Errorf("unexpected error reading json file: %v", err)
 	}
 	defer f.Close()
-	data, err := ioutil.ReadFile(f.Name())
+	data, err := os.ReadFile(f.Name())
 	if err != nil {
 		b.Error("unexpected error reading json file: ", err)
 	}
@@ -838,6 +902,7 @@ func TestBuildUpstreamName(t *testing.T) {
 	for k, tc := range tmplFuncTestcases {
 		loc := &ingress.Location{
 			Path:             tc.Path,
+			PathType:         &pathPrefix,
 			Rewrite:          rewrite.Config{Target: tc.Target},
 			Backend:          defaultBackend,
 			XForwardedPrefix: tc.XForwardedPrefix,
@@ -899,13 +964,14 @@ func TestEscapeLiteralDollar(t *testing.T) {
 
 func TestOpentracingPropagateContext(t *testing.T) {
 	tests := map[*ingress.Location]string{
-		{BackendProtocol: "HTTP"}:  "opentracing_propagate_context;",
-		{BackendProtocol: "HTTPS"}: "opentracing_propagate_context;",
-		{BackendProtocol: "GRPC"}:  "opentracing_grpc_propagate_context;",
-		{BackendProtocol: "GRPCS"}: "opentracing_grpc_propagate_context;",
-		{BackendProtocol: "AJP"}:   "opentracing_propagate_context;",
-		{BackendProtocol: "FCGI"}:  "opentracing_propagate_context;",
-		nil:                        "",
+		{BackendProtocol: "HTTP"}:      "opentracing_propagate_context;",
+		{BackendProtocol: "HTTPS"}:     "opentracing_propagate_context;",
+		{BackendProtocol: "AUTO_HTTP"}: "opentracing_propagate_context;",
+		{BackendProtocol: "GRPC"}:      "opentracing_grpc_propagate_context;",
+		{BackendProtocol: "GRPCS"}:     "opentracing_grpc_propagate_context;",
+		{BackendProtocol: "AJP"}:       "opentracing_propagate_context;",
+		{BackendProtocol: "FCGI"}:      "opentracing_propagate_context;",
+		nil:                            "",
 	}
 
 	for loc, expectedDirective := range tests {
@@ -936,6 +1002,76 @@ func TestGetIngressInformation(t *testing.T) {
 			10,
 			&ingressInformation{},
 		},
+		"valid ingress definition with name validIng in namespace default  using a service with name a-svc port number 8080": {
+			&ingress.Ingress{
+				Ingress: networking.Ingress{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "validIng",
+						Namespace: apiv1.NamespaceDefault,
+						Annotations: map[string]string{
+							"ingress.annotation": "ok",
+						},
+					},
+					Spec: networking.IngressSpec{
+						DefaultBackend: &networking.IngressBackend{
+							Service: &networking.IngressServiceBackend{
+								Name: "a-svc",
+								Port: networking.ServiceBackendPort{
+									Number: 8080,
+								},
+							},
+						},
+					},
+				},
+			},
+			"host1",
+			"",
+			&ingressInformation{
+				Namespace: "default",
+				Rule:      "validIng",
+				Path:      "/",
+				Annotations: map[string]string{
+					"ingress.annotation": "ok",
+				},
+				Service:     "a-svc",
+				ServicePort: "8080",
+			},
+		},
+		"valid ingress definition with name validIng in namespace default  using a service with name a-svc port name b-svc": {
+			&ingress.Ingress{
+				Ingress: networking.Ingress{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "validIng",
+						Namespace: apiv1.NamespaceDefault,
+						Annotations: map[string]string{
+							"ingress.annotation": "ok",
+						},
+					},
+					Spec: networking.IngressSpec{
+						DefaultBackend: &networking.IngressBackend{
+							Service: &networking.IngressServiceBackend{
+								Name: "a-svc",
+								Port: networking.ServiceBackendPort{
+									Name: "b-svc",
+								},
+							},
+						},
+					},
+				},
+			},
+			"host1",
+			"",
+			&ingressInformation{
+				Namespace: "default",
+				Rule:      "validIng",
+				Path:      "/",
+				Annotations: map[string]string{
+					"ingress.annotation": "ok",
+				},
+				Service:     "a-svc",
+				ServicePort: "b-svc",
+			},
+		},
 		"valid ingress definition with name validIng in namespace default": {
 			&ingress.Ingress{
 				Ingress: networking.Ingress{
@@ -947,8 +1083,10 @@ func TestGetIngressInformation(t *testing.T) {
 						},
 					},
 					Spec: networking.IngressSpec{
-						Backend: &networking.IngressBackend{
-							ServiceName: "a-svc",
+						DefaultBackend: &networking.IngressBackend{
+							Service: &networking.IngressServiceBackend{
+								Name: "a-svc",
+							},
 						},
 					},
 				},
@@ -958,6 +1096,7 @@ func TestGetIngressInformation(t *testing.T) {
 			&ingressInformation{
 				Namespace: "default",
 				Rule:      "validIng",
+				Path:      "/",
 				Annotations: map[string]string{
 					"ingress.annotation": "ok",
 				},
@@ -982,10 +1121,15 @@ func TestGetIngressInformation(t *testing.T) {
 									HTTP: &networking.HTTPIngressRuleValue{
 										Paths: []networking.HTTPIngressPath{
 											{
-												Path: "/ok",
+												Path:     "/ok",
+												PathType: &pathPrefix,
 												Backend: networking.IngressBackend{
-													ServiceName: "b-svc",
-													ServicePort: intstr.FromInt(80),
+													Service: &networking.IngressServiceBackend{
+														Name: "b-svc",
+														Port: networking.ServiceBackendPort{
+															Number: 80,
+														},
+													},
 												},
 											},
 										},
@@ -1007,6 +1151,56 @@ func TestGetIngressInformation(t *testing.T) {
 				},
 				Service:     "b-svc",
 				ServicePort: "80",
+			},
+		},
+		"valid ingress definition with name demo in namespace something and path /ok using a service with name b-svc port name b-svc-80": {
+			&ingress.Ingress{
+				Ingress: networking.Ingress{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "demo",
+						Namespace: "something",
+						Annotations: map[string]string{
+							"ingress.annotation": "ok",
+						},
+					},
+					Spec: networking.IngressSpec{
+						Rules: []networking.IngressRule{
+							{
+								Host: "foo.bar",
+								IngressRuleValue: networking.IngressRuleValue{
+									HTTP: &networking.HTTPIngressRuleValue{
+										Paths: []networking.HTTPIngressPath{
+											{
+												Path:     "/ok",
+												PathType: &pathPrefix,
+												Backend: networking.IngressBackend{
+													Service: &networking.IngressServiceBackend{
+														Name: "b-svc",
+														Port: networking.ServiceBackendPort{
+															Name: "b-svc-80",
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+							{},
+						},
+					},
+				},
+			},
+			"foo.bar",
+			"/ok",
+			&ingressInformation{
+				Namespace: "something",
+				Rule:      "demo",
+				Annotations: map[string]string{
+					"ingress.annotation": "ok",
+				},
+				Service:     "b-svc",
+				ServicePort: "b-svc-80",
 			},
 		},
 	}
@@ -1120,23 +1314,40 @@ func TestBuildCustomErrorLocationsPerServer(t *testing.T) {
 }
 
 func TestProxySetHeader(t *testing.T) {
-	invalidType := &ingress.Ingress{}
-	expected := "proxy_set_header"
-	actual := proxySetHeader(invalidType)
-
-	if expected != actual {
-		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
+	tests := []struct {
+		name     string
+		loc      interface{}
+		expected string
+	}{
+		{
+			name:     "nil",
+			loc:      nil,
+			expected: "proxy_set_header",
+		},
+		{
+			name:     "invalid type",
+			loc:      &ingress.Ingress{},
+			expected: "proxy_set_header",
+		},
+		{
+			name:     "http backend",
+			loc:      &ingress.Location{},
+			expected: "proxy_set_header",
+		},
+		{
+			name: "gRPC backend",
+			loc: &ingress.Location{
+				BackendProtocol: "GRPC",
+			},
+			expected: "grpc_set_header",
+		},
 	}
-
-	grpcBackend := &ingress.Location{
-		BackendProtocol: "GRPC",
-	}
-
-	expected = "grpc_set_header"
-	actual = proxySetHeader(grpcBackend)
-
-	if expected != actual {
-		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := proxySetHeader(tt.loc); got != tt.expected {
+				t.Errorf("proxySetHeader() = %v, expected %v", got, tt.expected)
+			}
+		})
 	}
 }
 
@@ -1259,7 +1470,8 @@ func TestEnforceRegexModifier(t *testing.T) {
 				Target:   "/alright",
 				UseRegex: true,
 			},
-			Path: "/ok",
+			Path:     "/ok",
+			PathType: &pathPrefix,
 		},
 	}
 	expected = true
@@ -1594,7 +1806,7 @@ func TestCleanConf(t *testing.T) {
 	}
 	actual := &bytes.Buffer{}
 	{
-		data, err := ioutil.ReadFile(testDataDir + "/cleanConf.src.conf")
+		data, err := os.ReadFile(testDataDir + "/cleanConf.src.conf")
 		if err != nil {
 			t.Error("unexpected error reading conf file: ", err)
 		}
@@ -1605,7 +1817,7 @@ func TestCleanConf(t *testing.T) {
 		}
 	}
 
-	expected, err := ioutil.ReadFile(testDataDir + "/cleanConf.expected.conf")
+	expected, err := os.ReadFile(testDataDir + "/cleanConf.expected.conf")
 	if err != nil {
 		t.Error("unexpected error reading conf file: ", err)
 	}

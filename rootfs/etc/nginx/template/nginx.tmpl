@@ -676,8 +676,8 @@ http {
         }
 
         location /configuration {
-            client_max_body_size                    {{ luaConfigurationRequestBodySize $cfg }}m;
-            client_body_buffer_size                 {{ luaConfigurationRequestBodySize $cfg }}m;
+            client_max_body_size                    {{ luaConfigurationRequestBodySize $cfg }};
+            client_body_buffer_size                 {{ luaConfigurationRequestBodySize $cfg }};
             proxy_buffering                         off;
 
             content_by_lua_block {
@@ -1178,7 +1178,7 @@ stream {
             auth_request        {{ $authPath }};
             auth_request_set    $auth_cookie $upstream_http_set_cookie;
             add_header          Set-Cookie $auth_cookie;
-            {{- range $line := buildAuthResponseHeaders $externalAuth.ResponseHeaders }}
+            {{- range $line := buildAuthResponseHeaders $proxySetHeader $externalAuth.ResponseHeaders }}
             {{ $line }}
             {{- end }}
             {{ end }}
@@ -1196,7 +1196,7 @@ stream {
             auth_digest {{ $location.BasicDigestAuth.Realm | quote }};
             auth_digest_user_file {{ $location.BasicDigestAuth.File }};
             {{ end }}
-            proxy_set_header Authorization "";
+            {{ $proxySetHeader }} Authorization "";
             {{ end }}
             {{ end }}
 
