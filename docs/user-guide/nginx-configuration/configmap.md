@@ -29,6 +29,7 @@ The following table shows a configuration option's name, type, and the default v
 |:---|:---|:------|
 |[add-headers](#add-headers)|string|""|
 |[allow-backend-server-header](#allow-backend-server-header)|bool|"false"|
+|[allow-snippet-annotations](#allow-snippet-annotations)|bool|true|
 |[hide-headers](#hide-headers)|string array|empty|
 |[access-log-params](#access-log-params)|string|""|
 |[access-log-path](#access-log-path)|string|"/var/log/nginx/access.log"|
@@ -203,6 +204,7 @@ The following table shows a configuration option's name, type, and the default v
 |[global-rate-limit-memcached-max-idle-timeout](#global-rate-limit)|int|10000|
 |[global-rate-limit-memcached-pool-size](#global-rate-limit)|int|50|
 |[global-rate-limit-status-code](#global-rate-limit)|int|429|
+|[service-upstream](#service-upstream)|bool|"false"|
 
 ## add-headers
 
@@ -211,6 +213,13 @@ Sets custom headers from named configmap before sending traffic to the client. S
 ## allow-backend-server-header
 
 Enables the return of the header Server from the backend instead of the generic nginx string. _**default:**_ is disabled
+
+## allow-snippet-annotations
+
+Enables Ingress to parse and add *-snippet annotations/directives created by the user. _**default:**_ `true`;
+
+Warning: We recommend enabling this option only if you TRUST users with permission to create Ingress objects, as this 
+may allow a user to add restricted configurations to the final nginx.conf file
 
 ## hide-headers
 
@@ -396,6 +405,24 @@ Sets the time during which a keep-alive client connection will stay open on the 
 
 _References:_
 [http://nginx.org/en/docs/http/ngx_http_core_module.html#keepalive_timeout](http://nginx.org/en/docs/http/ngx_http_core_module.html#keepalive_timeout)
+
+!!! important
+    Setting `keep-alive: '0'` will most likely break concurrent http/2 requests due to changes introduced with nginx 1.19.7
+
+```
+Changes with nginx 1.19.7                                        16 Feb 2021
+
+    *) Change: connections handling in HTTP/2 has been changed to better
+       match HTTP/1.x; the "http2_recv_timeout", "http2_idle_timeout", and
+       "http2_max_requests" directives have been removed, the
+       "keepalive_timeout" and "keepalive_requests" directives should be
+       used instead.
+```
+
+_References:_
+[nginx change log](http://nginx.org/en/CHANGES)
+[nginx issue tracker](https://trac.nginx.org/nginx/ticket/2155)
+[nginx mailing list](https://mailman.nginx.org/pipermail/nginx/2021-May/060697.html)
 
 ## keep-alive-requests
 
@@ -1206,3 +1233,8 @@ Configure `memcached` client for [Global Rate Limiting](https://github.com/kuber
 
 These settings get used by [lua-resty-global-throttle](https://github.com/ElvinEfendi/lua-resty-global-throttle)
 that ingress-nginx includes. Refer to the link to learn more about `lua-resty-global-throttle`.
+
+## service-upstream
+
+Set if the service's Cluster IP and port should be used instead of a list of all endpoints. This can be overwritten by an annotation on an Ingress rule.
+_**default:**_ "false"

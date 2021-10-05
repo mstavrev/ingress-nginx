@@ -18,7 +18,7 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-export NGINX_VERSION=1.20.1
+export NGINX_VERSION=1.19.9
 
 # Check for recent changes: https://github.com/vision5/ngx_devel_kit/compare/v0.3.1...master
 export NDK_VERSION=0.3.1
@@ -88,8 +88,8 @@ export NGINX_AJP_VERSION=a964a0bcc6a9f2bfb82a13752d7794a36319ffac
 # Check for recent changes: https://github.com/openresty/luajit2/compare/v2.1-20210510...v2.1-agentzh
 export LUAJIT_VERSION=2.1-20210510
 
-# Check for recent changes: https://github.com/openresty/lua-resty-balancer/compare/v0.03...master
-export LUA_RESTY_BALANCER=56fd8ad03d5718f507a5129edc43a25948364b9f
+# Check for recent changes: https://github.com/openresty/lua-resty-balancer/compare/v0.04...master
+export LUA_RESTY_BALANCER=0.04
 
 # Check for recent changes: https://github.com/openresty/lua-resty-lrucache/compare/v0.11...master
 export LUA_RESTY_CACHE=0.11
@@ -197,7 +197,7 @@ mkdir --verbose -p "$BUILD_PATH"
 cd "$BUILD_PATH"
 
 # download, verify and extract the source files
-get_src e462e11533d5c30baa05df7652160ff5979591d291736cfa5edb9fd2edb48c49 \
+get_src 2e35dff06a9826e8aca940e9e8be46b7e4b12c19a48d55bfc2dc28fc9cc7d841 \
         "https://nginx.org/download/nginx-$NGINX_VERSION.tar.gz"
 
 get_src 0e971105e210d272a497567fa2e2c256f4e39b845a5ba80d373e26ba1abfbd85 \
@@ -279,8 +279,8 @@ get_src 5d16e623d17d4f42cc64ea9cfb69ca960d313e12f5d828f785dd227cc483fcbd \
 get_src 462c6b38792bab4ca8212bdfd3f2e38f6883bb45c8fb8a03474ea813e0fab853 \
         "https://github.com/openresty/lua-resty-string/archive/$LUA_RESTY_STRING_VERSION.tar.gz"
 
-get_src b3d28adac2acee1e5904e9f65d6e80e0553b01647fa0701b812bc7e464de74ad \
-        "https://github.com/openresty/lua-resty-balancer/archive/$LUA_RESTY_BALANCER.tar.gz"
+get_src 16d72ed133f0c6df376a327386c3ef4e9406cf51003a700737c3805770ade7c5 \
+        "https://github.com/openresty/lua-resty-balancer/archive/v$LUA_RESTY_BALANCER.tar.gz"
 
 if [[ ${ARCH} == "s390x" ]]; then
 get_src 8f5f76d2689a3f6b0782f0a009c56a65e4c7a4382be86422c9b3549fe95b0dc4 \
@@ -568,7 +568,11 @@ cd "$BUILD_PATH/nginx-$NGINX_VERSION"
 # apply nginx patches
 for PATCH in `ls /patches`;do
   echo "Patch: $PATCH"
-  patch -p1 < /patches/$PATCH
+  if [[ "$PATCH" == *.txt ]]; then
+    patch -p0 < /patches/$PATCH
+  else
+    patch -p1 < /patches/$PATCH
+  fi
 done
 
 WITH_FLAGS="--with-debug \
@@ -733,7 +737,6 @@ writeDirs=( \
   /var/log/nginx \
 );
 
-addgroup -Sg 101 www-data
 adduser -S -D -H -u 101 -h /usr/local/nginx -s /sbin/nologin -G www-data -g www-data www-data
 
 for dir in "${writeDirs[@]}"; do

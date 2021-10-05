@@ -1203,6 +1203,106 @@ func TestGetIngressInformation(t *testing.T) {
 				ServicePort: "b-svc-80",
 			},
 		},
+		"valid ingress definition with name demo in namespace something and path /ok with a nil backend service": {
+			&ingress.Ingress{
+				Ingress: networking.Ingress{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "demo",
+						Namespace: "something",
+						Annotations: map[string]string{
+							"ingress.annotation": "ok",
+						},
+					},
+					Spec: networking.IngressSpec{
+						Rules: []networking.IngressRule{
+							{
+								Host: "foo.bar",
+								IngressRuleValue: networking.IngressRuleValue{
+									HTTP: &networking.HTTPIngressRuleValue{
+										Paths: []networking.HTTPIngressPath{
+											{
+												Path:     "/ok",
+												PathType: &pathPrefix,
+												Backend: networking.IngressBackend{
+													Service: nil,
+												},
+											},
+										},
+									},
+								},
+							},
+							{},
+						},
+					},
+				},
+			},
+			"foo.bar",
+			"/ok",
+			&ingressInformation{
+				Namespace: "something",
+				Rule:      "demo",
+				Annotations: map[string]string{
+					"ingress.annotation": "ok",
+				},
+			},
+		},
+		"valid ingress definition with name demo in namespace something and path /ok with both a nil service and a valid one": {
+			&ingress.Ingress{
+				Ingress: networking.Ingress{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "demo",
+						Namespace: "something",
+						Annotations: map[string]string{
+							"ingress.annotation": "ok",
+						},
+					},
+					Spec: networking.IngressSpec{
+						Rules: []networking.IngressRule{
+							{
+								Host: "foo.bar",
+								IngressRuleValue: networking.IngressRuleValue{
+									HTTP: &networking.HTTPIngressRuleValue{
+										Paths: []networking.HTTPIngressPath{
+											{
+												Path:     "/ok",
+												PathType: &pathPrefix,
+												Backend: networking.IngressBackend{
+													Service: nil,
+												},
+											},
+											{
+												Path:     "/oksvc",
+												PathType: &pathPrefix,
+												Backend: networking.IngressBackend{
+													Service: &networking.IngressServiceBackend{
+														Name: "b-svc",
+														Port: networking.ServiceBackendPort{
+															Name: "b-svc-80",
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+							{},
+						},
+					},
+				},
+			},
+			"foo.bar",
+			"/oksvc",
+			&ingressInformation{
+				Namespace: "something",
+				Rule:      "demo",
+				Annotations: map[string]string{
+					"ingress.annotation": "ok",
+				},
+				Service:     "b-svc",
+				ServicePort: "b-svc-80",
+			},
+		},
 	}
 
 	for title, testCase := range testcases {
@@ -1420,7 +1520,7 @@ func TestBuildOpenTracing(t *testing.T) {
 		EnableOpentracing:    true,
 		DatadogCollectorHost: "datadog-host.com",
 	}
-	expected = "opentracing_load_tracer /usr/local/lib64/libdd_opentracing.so /etc/nginx/opentracing.json;\r\n"
+	expected = "opentracing_load_tracer /usr/local/lib/libdd_opentracing.so /etc/nginx/opentracing.json;\r\n"
 	actual = buildOpentracing(cfgDatadog, []*ingress.Server{})
 
 	if expected != actual {
@@ -1444,7 +1544,7 @@ func TestBuildOpenTracing(t *testing.T) {
 		OpentracingOperationName:         "my-operation-name",
 		OpentracingLocationOperationName: "my-location-operation-name",
 	}
-	expected = "opentracing_load_tracer /usr/local/lib64/libdd_opentracing.so /etc/nginx/opentracing.json;\r\n"
+	expected = "opentracing_load_tracer /usr/local/lib/libdd_opentracing.so /etc/nginx/opentracing.json;\r\n"
 	expected += "opentracing_operation_name \"my-operation-name\";\n"
 	expected += "opentracing_location_operation_name \"my-location-operation-name\";\n"
 	actual = buildOpentracing(cfgOpenTracing, []*ingress.Server{})

@@ -63,11 +63,12 @@ FIELDS:
 
 There are 2 reasons primarily.
 
-(Reason #1) Until K8s version 1.21, it was was possible to create a ingress resource, with the "apiVersion:" field set to a value like ;
+(Reason #1) Until K8s version 1.21, it was possible to create a ingress resource, with the "apiVersion:" field set to a value like:
+
   - extensions/v1beta1
   - networking.k8s.io/v1beta1
 
-    (You would get a message about deprecation but the ingress resource would get created.)
+You would get a message about deprecation but the ingress resource would get created.
 
 From K8s version 1.22 onwards, you can ONLY set the "apiVersion:" field of a ingress resource, to the value "networking.k8s.io/v1". The reason is [official blog on deprecated ingress api versions](https://kubernetes.io/blog/2021/07/26/update-with-ingress-nginx/).
 
@@ -104,7 +105,7 @@ DESCRIPTION:
 
 - If you have only one instance of the Ingress-NGINX controller running in your cluster, and you still want to use ingressclass, you should add the annotation "ingressclass.kubernetes.io/is-default-class" in your ingress class, so any new Ingress objects will have this one as default ingressClass.
 
-In this case, you need to make your Controller aware of the objects. If you have several Ingress objects and they don't yet have the [ingressClassName](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#ingress-v1-networking-k8s-io) field, or the ingress annotation (`kubernetes.io/ingress.class`),  then you should start your ingress-controller with the flag [--watch-ingress-without-class=true](## What is the flag '--watch-without-ingress-class' ?) .
+In this case, you need to make your Controller aware of the objects. If you have several Ingress objects and they don't yet have the [ingressClassName](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#ingress-v1-networking-k8s-io) field, or the ingress annotation (`kubernetes.io/ingress.class`),  then you should start your ingress-controller with the flag [--watch-ingress-without-class=true](## What is the flag '--watch-ingress-without-class' ?) .
 
 You can configure your helm chart installation's values file with `.controller.watchIngressWithoutClass: true`. 
 
@@ -126,7 +127,7 @@ And add the value "spec.ingressClassName=nginx" in your Ingress objects
 ## I have multiple ingress objects in my cluster. What should I do ?
 - If you don't care about ingressClass, or you have a lot of ingress objects without ingressClass configuration, you can run the ingress-controller with the flag `--watch-ingress-without-class=true`.
 
-## What is the flag '--watch-without-ingress-class' ?
+## What is the flag '--watch-ingress-without-class' ?
 - Its a flag that is passed,as an argument, to the ingress-controller executable, in the pod spec. It looks like this ;
 ```
 ...
@@ -165,5 +166,31 @@ Bear in mind that, if your `Ingress-Nginx-Controller-nginx2` is started with the
 - and also objects pointing to the ingressClass that have the same .spec.controller as configured in `--controller-class`
 
 
-## Why is the ingressClassResource disabled by default in the helm chart ?
-- If this field is set to enabled value and there are existing ingress objects in the cluster, then the existing ingress objects will not be honored and only any new ingress object you create will inherit the ingressClass value.
+## I am seeing this error message in the logs of the Ingress-NGINX controller "ingress class annotation is not equal to the expected by Ingress Controller". Why ?
+- It is highly likely that you will also see the name of the ingress resource in the same error message. This error messsage has been observed on use the deprecated annotation, to spec the ingressClass, in a ingress resource manifest. It is recommended to use the ingress.spec.ingressClassName field, of the ingress resource, to spec the name of the ingressClass of the ingress resource being configured.
+
+## How to easily install multiple instances of the ingress-NGINX controller in the same cluster ?
+- Create a new namespace
+  ```
+  kubectl create namespace ingress-nginx-2
+  ```
+- Use helm to install the additional instance of the ingress controller
+- Ensure you have helm working (refer to helm documentation)
+- We have to assume that you have the helm repo for the ingress-NGINX controller already added to your helm config. But, if you have not added the helm repo then you can do this to add the repo to your helm config;
+  ```
+  helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx`
+  ```
+- Make sure you have updated the helm repo data;
+  ```
+  helm repo update
+  ```
+- Now you install the additional instance of the ingress-NGINX controller like this ;
+  ```
+  helm install ingress-nginx-2 ingress-nginx/ingress-nginx  \
+  --namespace ingress-nginx-2 \
+  --set controller.ingressClassResource.name=nginx-2 \
+  --set controller.ingressClassResource.controllerValue= "k8s.io/ingress-nginx-2" \
+  --set controller.ingressClassResource.enabled=true \
+  --set controller.ingressClassByName=true
+  ```
+- If you need to install yet another instance, then repeat the procedure to create a new namespace, change the values like names & namespaces (for example from "-2" to "-3"), or anything else that meets your needs.

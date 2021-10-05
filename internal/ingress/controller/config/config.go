@@ -93,6 +93,10 @@ const (
 type Configuration struct {
 	defaults.Backend `json:",squash"`
 
+	// AllowSnippetAnnotations enable users to add their own snippets via ingress annotation.
+	// If disabled, only snippets added via ConfigMap are added to ingress.
+	AllowSnippetAnnotations bool `json:"allow-snippet-annotations"`
+
 	// Sets the name of the configmap that contains the headers to pass to the client
 	AddHeaders string `json:"add-headers,omitempty"`
 
@@ -757,6 +761,8 @@ func NewDefault() Configuration {
 	defGlobalExternalAuth := GlobalExternalAuth{"", "", "", "", "", append(defResponseHeaders, ""), "", "", "", []string{}, map[string]string{}}
 
 	cfg := Configuration{
+
+		AllowSnippetAnnotations:          true,
 		AllowBackendServerHeader:         false,
 		AccessLogPath:                    "/var/log/nginx/access.log",
 		AccessLogParams:                  "",
@@ -860,6 +866,7 @@ func NewDefault() Configuration {
 			ProxyBuffering:           "off",
 			ProxyHTTPVersion:         "1.1",
 			ProxyMaxTempFileSize:     "1024m",
+			ServiceUpstream:          false,
 		},
 		UpstreamKeepaliveConnections:           320,
 		UpstreamKeepaliveTimeout:               60,

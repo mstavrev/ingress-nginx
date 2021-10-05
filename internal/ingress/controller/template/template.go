@@ -1018,6 +1018,10 @@ func getIngressInformation(i, h, p interface{}) *ingressInformation {
 				continue
 			}
 
+			if rPath.Backend.Service == nil {
+				continue
+			}
+
 			if info.Service != "" && rPath.Backend.Service.Name == "" {
 				// empty rule. Only contains a Path and PathType
 				return info
@@ -1108,7 +1112,7 @@ func buildOpentracing(c interface{}, s interface{}) string {
 	buf := bytes.NewBufferString("")
 
 	if cfg.DatadogCollectorHost != "" {
-		buf.WriteString("opentracing_load_tracer /usr/local/lib64/libdd_opentracing.so /etc/nginx/opentracing.json;")
+		buf.WriteString("opentracing_load_tracer /usr/local/lib/libdd_opentracing.so /etc/nginx/opentracing.json;")
 	} else if cfg.ZipkinCollectorHost != "" {
 		buf.WriteString("opentracing_load_tracer /usr/local/lib/libzipkin_opentracing_plugin.so /etc/nginx/opentracing.json;")
 	} else if cfg.JaegerCollectorHost != "" || cfg.JaegerEndpoint != "" {
