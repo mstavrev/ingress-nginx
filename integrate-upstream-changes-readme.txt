@@ -12,8 +12,15 @@ git checkout master
 
 git merge controller-v0.34.1
 
-4. Fix conflicts
+4. Fix conflicts if any
 
-5. Build
+5. Edit:
+    - images/nginx/Makefile: increment the value for TAG
+    - Makefile: set the BASE_IMAGE's tag to the same value as incremented above 
+
+6. Commit and rebase on the remote/upstream/tag that had been merged
+
+7. Push
+
 
 
