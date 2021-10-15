@@ -21,12 +21,13 @@ DIR:=$(strip $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST)))))
 INIT_BUILDX=$(DIR)/../../hack/init-buildx.sh
 
 # 0.0.0 shouldn't clobber any released builds
-TAG ?= 0.118
+TAG ?= 0.120
 REGISTRY ?= docker.io/mstavrev
 
 IMAGE = $(REGISTRY)/nginx
 
-PLATFORMS = amd64
+# required to enable buildx
+export DOCKER_CLI_EXPERIMENTAL=enabled
 
 # build with buildx
 PLATFORMS?=linux/amd64
@@ -37,9 +38,6 @@ build: ensure-buildx
 		--platform=${PLATFORMS} $(OUTPUT) \
 		--progress=$(PROGRESS) \
 		--pull \
-		--push \
-		--progress plain \
-		--platform amd64 \
 		--tag $(IMAGE):$(TAG) rootfs
 
 # push the cross built image
