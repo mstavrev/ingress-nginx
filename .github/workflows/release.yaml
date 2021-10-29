@@ -13,12 +13,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
-#      - name: Set up Go 1.17
-#        id: go
-#        uses: actions/setup-go@v2
-#        with:
-#          go-version: 1.17
-
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
         
@@ -39,4 +33,4 @@ jobs:
       - name: Build and publish Nginx-controller image
         shell: bash
         run: |
-          cd ../.. && make release
+          make release
