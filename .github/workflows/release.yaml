@@ -1,0 +1,42 @@
+name: Release
+
+on:
+  watch:
+    types: [started]
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    if: github.actor == 'mstavrev'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+#      - name: Set up Go 1.17
+#        id: go
+#        uses: actions/setup-go@v2
+#        with:
+#          go-version: 1.17
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+        
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and publish Nginx image
+        shell: bash
+        run: |
+          cd images/nginx && make push
+
+      - name: Build and publish Nginx-controller image
+        shell: bash
+        run: |
+          cd ../.. && make release
