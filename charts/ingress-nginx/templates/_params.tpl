@@ -3,8 +3,12 @@
 {{- if .Values.defaultBackend.enabled }}
 - --default-backend-service=$(POD_NAMESPACE)/{{ include "ingress-nginx.defaultBackend.fullname" . }}
 {{- end }}
-{{- if .Values.controller.publishService.enabled }}
+{{- if and .Values.controller.publishService.enabled .Values.controller.service.enabled }}
+{{- if .Values.controller.service.external.enabled }}
 - --publish-service={{ template "ingress-nginx.controller.publishServicePath" . }}
+{{- else if .Values.controller.service.internal.enabled }}
+- --publish-service={{ template "ingress-nginx.controller.publishServicePath" . }}-internal
+{{- end }}
 {{- end }}
 - --election-id={{ .Values.controller.electionID }}
 - --controller-class={{ .Values.controller.ingressClassResource.controllerValue }}
@@ -17,6 +21,9 @@
 {{- end }}
 {{- if .Values.controller.scope.enabled }}
 - --watch-namespace={{ default "$(POD_NAMESPACE)" .Values.controller.scope.namespace }}
+{{- end }}
+{{- if and (not .Values.controller.scope.enabled) .Values.controller.scope.namespaceSelector }}
+- --watch-namespace-selector={{ default "" .Values.controller.scope.namespaceSelector }}
 {{- end }}
 {{- if and .Values.controller.reportNodeInternalIp .Values.controller.hostNetwork }}
 - --report-node-internal-ip-address={{ .Values.controller.reportNodeInternalIp }}

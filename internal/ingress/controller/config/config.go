@@ -18,6 +18,7 @@ package config
 
 import (
 	"strconv"
+	"strings"
 	"time"
 
 	"k8s.io/klog/v2"
@@ -96,6 +97,11 @@ type Configuration struct {
 	// AllowSnippetAnnotations enable users to add their own snippets via ingress annotation.
 	// If disabled, only snippets added via ConfigMap are added to ingress.
 	AllowSnippetAnnotations bool `json:"allow-snippet-annotations"`
+
+	// AnnotationValueWordBlocklist defines words that should not be part of an user annotation value
+	// (can be used to run arbitrary code or configs, for example) and that should be dropped.
+	// This list should be separated by "," character
+	AnnotationValueWordBlocklist string `json:"annotation-value-word-blocklist"`
 
 	// Sets the name of the configmap that contains the headers to pass to the client
 	AddHeaders string `json:"add-headers,omitempty"`
@@ -413,6 +419,9 @@ type Configuration struct {
 	// Brotli Compression Level that will be used
 	BrotliLevel int `json:"brotli-level,omitempty"`
 
+	// Minimum length of responses, in bytes, that will be eligible for brotli compression
+	BrotliMinLength int `json:"brotli-min-length,omitempty"`
+
 	// MIME Types that will be compressed on-the-fly using Brotli module
 	BrotliTypes string `json:"brotli-types,omitempty"`
 
@@ -536,6 +545,11 @@ type Configuration struct {
 
 	// OpentracingOperationName specifies a custom name for the location span
 	OpentracingLocationOperationName string `json:"opentracing-location-operation-name"`
+
+	// OpentracingTrustIncomingSpan sets whether or not to trust incoming trace spans
+	// If false, incoming span headers will be rejected
+	// Default: true
+	OpentracingTrustIncomingSpan bool `json:"opentracing-trust-incoming-span"`
 
 	// ZipkinCollectorHost specifies the host to use when uploading traces
 	ZipkinCollectorHost string `json:"zipkin-collector-host"`
@@ -754,6 +768,20 @@ func NewDefault() Configuration {
 	defNginxStatusIpv6Whitelist := make([]string, 0)
 	defResponseHeaders := make([]string, 0)
 
+	defAnnotationValueWordBlocklist := []string{
+		"load_module",
+		"lua_package",
+		"_by_lua",
+		"location",
+		"root",
+		"proxy_pass",
+		"serviceaccount",
+		"{",
+		"}",
+		"'",
+		"\\",
+	}
+
 	defIPCIDR = append(defIPCIDR, "0.0.0.0/0")
 	defNginxStatusIpv4Whitelist = append(defNginxStatusIpv4Whitelist, "127.0.0.1")
 	defNginxStatusIpv6Whitelist = append(defNginxStatusIpv6Whitelist, "::1")
@@ -764,6 +792,7 @@ func NewDefault() Configuration {
 
 		AllowSnippetAnnotations:          true,
 		AllowBackendServerHeader:         false,
+		AnnotationValueWordBlocklist:     strings.Join(defAnnotationValueWordBlocklist, ","),
 		AccessLogPath:                    "/var/log/nginx/access.log",
 		AccessLogParams:                  "",
 		EnableAccessLogForDefaultBackend: false,
@@ -773,6 +802,7 @@ func NewDefault() Configuration {
 		BlockUserAgents:                  defBlockEntity,
 		BlockReferers:                    defBlockEntity,
 		BrotliLevel:                      4,
+		BrotliMinLength:                  20,
 		BrotliTypes:                      brotliTypes,
 		ClientHeaderBufferSize:           "1k",
 		ClientHeaderTimeout:              60,
@@ -874,6 +904,7 @@ func NewDefault() Configuration {
 		LimitConnZoneVariable:                  defaultLimitConnZoneVariable,
 		BindAddressIpv4:                        defBindAddress,
 		BindAddressIpv6:                        defBindAddress,
+		OpentracingTrustIncomingSpan:           true,
 		ZipkinCollectorPort:                    9411,
 		ZipkinServiceName:                      "nginx",
 		ZipkinSampleRate:                       1.0,
