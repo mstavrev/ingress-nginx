@@ -28,6 +28,7 @@ They are set in the container spec of the `ingress-nginx-controller` Deployment 
 | `--http-port`                      | Port to use for servicing HTTP traffic. (default 80) |
 | `--https-port`                     | Port to use for servicing HTTPS traffic. (default 443) |
 | `--ingress-class`                  | Name of the ingress class this controller satisfies. The class of an Ingress object is set using the field IngressClassName in Kubernetes clusters version v1.18.0 or higher or the annotation "kubernetes.io/ingress.class" (deprecated). If this parameter is not set, or set to the default value of "nginx", it will handle ingresses with either an empty or "nginx" class name. |
+| `--ingress-class-by-name`          | Define if Ingress Controller should watch for Ingress Class by Name together with Controller Class. (default false) |
 | `--kubeconfig`                     | Path to a kubeconfig file containing authorization and API server information. |
 | `--log_backtrace_at`               | when logging hits line file:N, emit a stack trace (default :0) |
 | `--log_dir`                        | If non-empty, write log files in this directory |
@@ -39,6 +40,7 @@ They are set in the container spec of the `ingress-nginx-controller` Deployment 
 | `--maxmind-retries-count`          | Number of attempts to download the GeoIP DB. (default 1) |
 | `--maxmind-license-key`            | Maxmind license key to download GeoLite2 Databases. https://blog.maxmind.com/2019/12/18/significant-changes-to-accessing-and-using-geolite2-databases |
 | `--metrics-per-host`               | Export metrics per-host (default true) |
+| `--post-shutdown-grace-period`     | Additional delay in seconds before controller container exits. (default 10) |
 | `--profiler-port`                  | Port to use for expose the ingress controller Go profiler when it is enabled. (default 10245) |
 | `--profiling`                      | Enable profiling via web interface host:port/debug/pprof/ (default true) |
 | `--publish-service`                | Service fronting the Ingress controller. Takes the form "namespace/name". When used together with update-status, the controller mirrors the address of this service's endpoints to the load-balancer status of all Ingress objects it satisfies. |

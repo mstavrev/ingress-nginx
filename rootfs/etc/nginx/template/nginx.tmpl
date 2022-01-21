@@ -153,10 +153,10 @@ http {
     modsecurity_rules '
       {{ $all.Cfg.ModsecuritySnippet }}
     ';
-    {{ end }}
-
+    {{ else }}
     modsecurity_rules_file /etc/nginx/modsecurity/modsecurity.conf;
-
+    {{ end }}
+    
     {{ if $all.Cfg.EnableOWASPCoreRules }}
     modsecurity_rules_file /etc/nginx/owasp-modsecurity-crs/nginx-modsecurity.conf;
     {{ end }}
@@ -181,6 +181,7 @@ http {
     geoip2 /etc/nginx/geoip/GeoLite2-Country.mmdb {
         $geoip2_country_code source=$remote_addr country iso_code;
         $geoip2_country_name source=$remote_addr country names en;
+        $geoip2_continent_code source=$remote_addr continent code;
         $geoip2_continent_name source=$remote_addr continent names en;
     }
     {{ end }}
@@ -189,6 +190,7 @@ http {
     geoip2 /etc/nginx/geoip/GeoIP2-Country.mmdb {
         $geoip2_country_code source=$remote_addr country iso_code;
         $geoip2_country_name source=$remote_addr country names en;
+        $geoip2_continent_code source=$remote_addr continent code;
         $geoip2_continent_name source=$remote_addr continent names en;
     }
     {{ end }}
@@ -584,11 +586,17 @@ http {
                 request_uri = string.sub(request_uri, 1, -2)
             end
 
+            {{ if $cfg.UseForwardedHeaders }}
+            local redirectScheme = ngx.var.http_x_forwarded_proto
+            {{ else }}
+            local redirectScheme = ngx.var.scheme
+            {{ end }}
+
             {{ if ne $all.ListenPorts.HTTPS 443 }}
             {{ $redirect_port := (printf ":%v" $all.ListenPorts.HTTPS) }}
-            return string.format("%s://%s%s%s", ngx.var.scheme, "{{ $redirect.To }}", "{{ $redirect_port }}", request_uri)
+            return string.format("%s://%s%s%s", redirectScheme, "{{ $redirect.To }}", "{{ $redirect_port }}", request_uri)
             {{ else }}
-            return string.format("%s://%s%s", ngx.var.scheme, "{{ $redirect.To }}", request_uri)
+            return string.format("%s://%s%s", redirectScheme, "{{ $redirect.To }}", request_uri)
             {{ end }}
         }
 
@@ -826,6 +834,11 @@ stream {
         proxy_next_upstream_tries   {{ $cfg.ProxyStreamNextUpstreamTries }};
         proxy_pass              upstream_balancer;
     }
+    {{ end }}
+
+    # Stream Snippets
+    {{ range $snippet := .StreamSnippets }}
+    {{ $snippet }}
     {{ end }}
 }
 

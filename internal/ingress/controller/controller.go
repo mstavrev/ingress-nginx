@@ -41,6 +41,7 @@ import (
 	"k8s.io/ingress-nginx/internal/ingress/controller/ingressclass"
 	"k8s.io/ingress-nginx/internal/ingress/controller/store"
 	"k8s.io/ingress-nginx/internal/ingress/errors"
+	"k8s.io/ingress-nginx/internal/ingress/metric/collectors"
 	"k8s.io/ingress-nginx/internal/k8s"
 	"k8s.io/ingress-nginx/internal/nginx"
 	"k8s.io/klog/v2"
@@ -97,6 +98,7 @@ type Configuration struct {
 
 	EnableMetrics  bool
 	MetricsPerHost bool
+	MetricsBuckets *collectors.HistogramBuckets
 
 	FakeCertificate *ingress.SSLCert
 
@@ -116,7 +118,8 @@ type Configuration struct {
 
 	MonitorMaxBatchSize int
 
-	ShutdownGracePeriod int
+	PostShutdownGracePeriod int
+	ShutdownGracePeriod     int
 }
 
 // GetPublishService returns the Service used to set the load-balancer status of Ingresses.
@@ -538,6 +541,7 @@ func (n *NGINXController) getConfiguration(ingresses []*ingress.Ingress) (sets.S
 		PassthroughBackends:   passUpstreams,
 		BackendConfigChecksum: n.store.GetBackendConfiguration().Checksum,
 		DefaultSSLCertificate: n.getDefaultSSLCertificate(),
+		StreamSnippets:        n.getStreamSnippets(ingresses),
 	}
 }
 
@@ -560,6 +564,11 @@ func dropSnippetDirectives(anns *annotations.Ingress, ingKey string) {
 		if anns.ExternalAuth.AuthSnippet != "" {
 			klog.V(3).Infof("Ingress %q tried to use auth-snippet and the annotation is disabled by the admin. Removing the annotation", ingKey)
 			anns.ExternalAuth.AuthSnippet = ""
+		}
+
+		if anns.StreamSnippet != "" {
+			klog.V(3).Infof("Ingress %q tried to use stream-snippet and the annotation is disabled by the admin. Removing the annotation", ingKey)
+			anns.StreamSnippet = ""
 		}
 
 	}
@@ -896,6 +905,7 @@ func (n *NGINXController) createUpstreams(data []*ingress.Ingress, du *ingress.B
 				upstreams[defBackend].NoServer = true
 				upstreams[defBackend].TrafficShapingPolicy = ingress.TrafficShapingPolicy{
 					Weight:        anns.Canary.Weight,
+					WeightTotal:   anns.Canary.WeightTotal,
 					Header:        anns.Canary.Header,
 					HeaderValue:   anns.Canary.HeaderValue,
 					HeaderPattern: anns.Canary.HeaderPattern,
@@ -1325,7 +1335,10 @@ func (n *NGINXController) createServers(data []*ingress.Ingress,
 
 			servers[host].SSLCert = cert
 
-			if cert.ExpireTime.Before(time.Now().Add(240 * time.Hour)) {
+			now := time.Now()
+			if cert.ExpireTime.Before(now) {
+				klog.Warningf("SSL certificate for server %q expired (%v)", host, cert.ExpireTime)
+			} else if cert.ExpireTime.Before(now.Add(240 * time.Hour)) {
 				klog.Warningf("SSL certificate for server %q is about to expire (%v)", host, cert.ExpireTime)
 			}
 		}
@@ -1777,4 +1790,15 @@ func ingressForHostPath(hostname, path string, servers []*ingress.Server) []*net
 	}
 
 	return ingresses
+}
+
+func (n *NGINXController) getStreamSnippets(ingresses []*ingress.Ingress) []string {
+	snippets := make([]string, 0, len(ingresses))
+	for _, i := range ingresses {
+		if i.ParsedAnnotations.StreamSnippet == "" {
+			continue
+		}
+		snippets = append(snippets, i.ParsedAnnotations.StreamSnippet)
+	}
+	return snippets
 }
