@@ -54,7 +54,7 @@ ifneq ($(PLATFORM),)
 	PLATFORM_FLAG="--platform"
 endif
 
-BASE_IMAGE ?= docker.io/mstavrev/nginx:0.128
+BASE_IMAGE ?= docker.io/mstavrev/nginx:0.129
 
 GOARCH=$(ARCH)
 
