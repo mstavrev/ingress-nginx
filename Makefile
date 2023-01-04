@@ -50,17 +50,9 @@ ifeq ($(ARCH),)
 endif
 
 REGISTRY ?= docker.io/mstavrev
-BASE_IMAGE ?= docker.io/mstavrev/nginx:0.131
+BASE_IMAGE ?= docker.io/mstavrev/nginx:0.132
 ifneq ($(PLATFORM),)
 	PLATFORM_FLAG="--platform"
-endif
-
-MAC_OS = $(shell uname -s)
-
-ifeq ($(MAC_OS), Darwin)
-	MAC_DOCKER_FLAGS="--load"
-else
-	MAC_DOCKER_FLAGS=
 endif
 
 GOARCH=$(ARCH)
@@ -74,7 +66,6 @@ image: clean-image ## Build image for a particular arch.
 	docker build \
 		${PLATFORM_FLAG} ${PLATFORM} \
 		--no-cache \
-		$(MAC_DOCKER_FLAGS) \
 		--pull \
 		--build-arg BASE_IMAGE="$(BASE_IMAGE)" \
 		--build-arg VERSION="$(TAG)" \
@@ -92,7 +83,6 @@ image-chroot: clean-chroot-image ## Build image for a particular arch.
 	echo "Building docker image ($(ARCH))..."
 	docker build \
 		--no-cache \
-		$(MAC_DOCKER_FLAGS) \
 		--pull \
 		--build-arg BASE_IMAGE="$(BASE_IMAGE)" \
 		--build-arg VERSION="$(TAG)" \
@@ -149,6 +139,7 @@ test:  ## Run go unit tests.
 		COMMIT_SHA=$(COMMIT_SHA) \
 		REPO_INFO=$(REPO_INFO) \
 		TAG=$(TAG) \
+		GOFLAGS="-buildvcs=false" \
 		test/test.sh
 
 .PHONY: lua-test
