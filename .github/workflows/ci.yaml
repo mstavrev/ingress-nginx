@@ -22,6 +22,7 @@ on:
         required: false
         type: boolean
 
+
 permissions:
   contents: read
 
@@ -39,7 +40,7 @@ jobs:
     steps:
 
       - name: Checkout
-        uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f # v3.4.0
+        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
 
       - uses: dorny/paths-filter@4512585405083f25c027a35db413c2b3b9006d50 # v2.11.1
         id: filter
@@ -65,7 +66,7 @@ jobs:
     steps:
 
       - name: Checkout
-        uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f # v3.4.0
+        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
 
       - name: Run Gosec Security Scanner
         uses: securego/gosec@a459eb0ba387d9bd083d5c2e2354dbeef2465038 # v2.15.0
@@ -82,11 +83,11 @@ jobs:
       (needs.changes.outputs.go == 'true')
     steps:
       - name: Checkout
-        uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f # v3.4.0
+        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
       
       - name: Set up Go
         id: go
-        uses: actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568 # v3.5.0
+        uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 # v4.0.0
         with:
           go-version: '1.20'
           check-latest: true
@@ -101,11 +102,11 @@ jobs:
       (needs.changes.outputs.go == 'true')
     steps:
       - name: Checkout
-        uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f # v3.4.0
+        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
       
       - name: Set up Go
         id: go
-        uses: actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568 # v3.5.0
+        uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 # v4.0.0
         with:
           go-version: '1.20'
           check-latest: true
@@ -120,11 +121,11 @@ jobs:
       (needs.changes.outputs.go == 'true')
     steps:
       - name: Checkout
-        uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f # v3.4.0
+        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
       
       - name: Set up Go
         id: go
-        uses: actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568 # v3.5.0
+        uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 # v4.0.0
         with:
           go-version: '1.20'
           check-latest: true
@@ -141,11 +142,11 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f # v3.4.0
+        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
 
       - name: Set up Go
         id: go
-        uses: actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568 # v3.5.0
+        uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 # v4.0.0
         with:
           go-version: '1.20'
           check-latest: true
@@ -192,7 +193,7 @@ jobs:
         with:
           name: docker.tar.gz
           path: docker.tar.gz
-
+          retention-days: 5
   helm:
     name: Helm chart
     runs-on: ubuntu-latest
@@ -204,14 +205,14 @@ jobs:
 
     strategy:
       matrix:
-        k8s: [v1.24.7, v1.25.3, v1.26.0]
+        k8s: [v1.24.12, v1.25.8, v1.26.3,v1.27.1]
 
     steps:
       - name: Checkout
-        uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f # v3.4.0
+        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
 
       - name: Setup Go
-        uses: actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568 # v3.5.0
+        uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 # v4.0.0
         with:
           go-version: '1.20'
           check-latest: true
@@ -254,11 +255,6 @@ jobs:
         run: |
           kind create cluster --image=kindest/node:${{ matrix.k8s }}
 
-      - uses: geekyeggo/delete-artifact@54ab544f12cdb7b71613a16a2b5a37a9ade990af # v2.0.0
-        with:
-          name: docker.tar.gz
-          failOnError: false
-
       - name: Load images from cache
         run: |
           echo "loading docker images..."
@@ -284,11 +280,11 @@ jobs:
 
     strategy:
       matrix:
-        k8s: [v1.24.7, v1.25.3, v1.26.0]
+        k8s: [v1.24.12, v1.25.8, v1.26.3,v1.27.1]
 
     steps:
       - name: Checkout
-        uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f # v3.4.0
+        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
 
       - name: cache
         uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
@@ -299,11 +295,6 @@ jobs:
         id: kind
         run: |
           kind create cluster --image=kindest/node:${{ matrix.k8s }} --config test/e2e/kind.yaml
-
-      - uses: geekyeggo/delete-artifact@54ab544f12cdb7b71613a16a2b5a37a9ade990af # v2.0.0
-        with:
-          name: docker.tar.gz
-          failOnError: false
 
       - name: Load images from cache
         run: |
@@ -326,6 +317,7 @@ jobs:
           name: e2e-test-reports-${{ matrix.k8s }}
           path: 'test/junitreports/report*.xml'
 
+
   kubernetes-chroot:
     name: Kubernetes chroot
     runs-on: ubuntu-latest
@@ -337,12 +329,12 @@ jobs:
 
     strategy:
       matrix:
-        k8s: [v1.24.7, v1.25.3, v1.26.0]
+        k8s: [v1.24.12, v1.25.8, v1.26.3,v1.27.1]
 
     steps:
 
       - name: Checkout
-        uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f # v3.4.0
+        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
 
       - name: cache
         uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
@@ -353,11 +345,6 @@ jobs:
         id: kind
         run: |
           kind create cluster --image=kindest/node:${{ matrix.k8s }} --config test/e2e/kind.yaml
-
-      - uses: geekyeggo/delete-artifact@54ab544f12cdb7b71613a16a2b5a37a9ade990af # v2.0.0
-        with:
-          name: docker.tar.gz
-          failOnError: false
 
       - name: Load images from cache
         run: |
@@ -374,7 +361,7 @@ jobs:
           kind get kubeconfig > $HOME/.kube/kind-config-kind
           make kind-e2e-test
 
-      - name: Uplaod e2e junit-reports
+      - name: Upload e2e junit-reports
         uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         if: success() || failure()
         with:
@@ -391,7 +378,7 @@ jobs:
       PLATFORMS: linux/amd64,linux/arm64
     steps:
       - name: Checkout
-        uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f # v3.4.0
+        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
 
       - uses: dorny/paths-filter@4512585405083f25c027a35db413c2b3b9006d50 # v2.11.1
         id: filter-images
@@ -408,8 +395,8 @@ jobs:
               - 'images/echo/**'
             go-grpc-greeter-server:
               - 'images/go-grpc-greeter-server/**'
-            httpbin:
-              - 'images/httpbin/**'
+            httpbun:
+              - 'images/httpbun/**'
             kube-webhook-certgen:
               - 'images/kube-webhook-certgen/**'
             ext-auth-example-authsvc:
@@ -435,10 +422,10 @@ jobs:
         if: ${{ steps.filter-images.outputs.go-grpc-greeter-server == 'true' }}
         run: |
           cd images/go-grpc-greeter-server && make build
-      - name: httpbin image build
+      - name: httpbun image build
         if: ${{ steps.filter-images.outputs.httpbin == 'true' }}
         run: |
-          cd images/httpbin && make build
+          cd images/httpbun && make build
       - name: kube-webhook-certgen image build
         if: ${{ steps.filter-images.outputs.kube-webhook-certgen == 'true' }}
         run: |
@@ -460,11 +447,11 @@ jobs:
 
     strategy:
       matrix:
-        k8s: [v1.24.7, v1.25.3, v1.26.0]
+        k8s: [v1.24.12, v1.25.8, v1.26.3,v1.27.1]
 
     steps:
       - name: Checkout
-        uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f # v3.4.0
+        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
 
       - uses: dorny/paths-filter@4512585405083f25c027a35db413c2b3b9006d50 # v2.11.1
         id: filter-images
@@ -483,7 +470,7 @@ jobs:
       - name: Set up Go
         id: go
         if: ${{ steps.filter-images.outputs.kube-webhook-certgen == 'true' }}
-        uses: actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568 # v3.5.0
+        uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 # v4.0.0
         with:
           go-version: '1.20'
           check-latest: true

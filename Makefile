@@ -50,7 +50,7 @@ ifeq ($(ARCH),)
 endif
 
 REGISTRY ?= docker.io/mstavrev
-BASE_IMAGE ?= docker.io/mstavrev/nginx:0.170
+BASE_IMAGE ?= docker.io/mstavrev/nginx:0.171
 ifneq ($(PLATFORM),)
 	PLATFORM_FLAG="--platform"
 endif
@@ -145,7 +145,6 @@ test:  ## Run go unit tests.
 .PHONY: lua-test
 lua-test: ## Run lua unit tests.
 	@build/run-in-docker.sh \
-		BUSTED_ARGS=$(BUSTED_ARGS) \
 		MAC_OS=$(MAC_OS) \
 		test/test-lua.sh
 
