@@ -50,7 +50,7 @@ ifeq ($(ARCH),)
 endif
 
 REGISTRY ?= docker.io/mstavrev
-BASE_IMAGE ?= docker.io/mstavrev/nginx:0.181
+BASE_IMAGE ?= docker.io/mstavrev/nginx:0.182
 ifneq ($(PLATFORM),)
 	PLATFORM_FLAG="--platform"
 endif
@@ -125,6 +125,12 @@ static-check: ## Run verification script for boilerplate, codegen, gofmt, golint
 	@build/run-in-docker.sh \
 	    MAC_OS=$(MAC_OS) \
 		hack/verify-all.sh
+
+.PHONY: golint-check
+golint-check:
+	@build/run-in-docker.sh \
+	    MAC_OS=$(MAC_OS) \
+		hack/verify-golint.sh
 
 ###############################
 # Tests for ingress-nginx
