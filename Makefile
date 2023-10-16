@@ -50,7 +50,7 @@ ifeq ($(ARCH),)
 endif
 
 REGISTRY ?= docker.io/mstavrev
-BASE_IMAGE ?= docker.io/mstavrev/nginx:0.191
+BASE_IMAGE ?= docker.io/mstavrev/nginx:0.193
 ifneq ($(PLATFORM),)
 	PLATFORM_FLAG="--platform"
 endif
