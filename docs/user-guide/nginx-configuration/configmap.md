@@ -263,7 +263,7 @@ Enables Ingress to parse and add *-snippet annotations/directives created by the
 Warning: We recommend enabling this option only if you TRUST users with permission to create Ingress objects, as this
 may allow a user to add restricted configurations to the final nginx.conf file
 
-**This option will be defaulted to false in the next major release**
+**This option is defaulted to false since v1.9.0**
 
 ## annotations-risk-level
 
@@ -719,6 +719,9 @@ Enables or disables the directive [aio_write](https://nginx.org/en/docs/http/ngx
 Enables or disables compression of HTTP responses using the ["gzip" module](https://nginx.org/en/docs/http/ngx_http_gzip_module.html). MIME types to compress are controlled by [gzip-types](#gzip-types). _**default:**_ false
 
 ## use-geoip
+
+!!! attention
+   GeoIP is deprecated and removed on v1.10. Users willing to use GeoIP should use GeoIP2
 
 Enables or disables ["geoip" module](https://nginx.org/en/docs/http/ngx_http_geoip_module.html) that creates variables with values depending on the client IP address, using the precompiled MaxMind databases.
 _**default:**_ true
