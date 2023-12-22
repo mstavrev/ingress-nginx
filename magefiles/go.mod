@@ -1,6 +1,6 @@
 module k8s.io/ingress-nginx/magefiles
 
-go 1.21.3
+go 1.21.5
 
 require (
 	github.com/blang/semver/v4 v4.0.0
@@ -27,7 +27,7 @@ require (
 	github.com/onsi/gomega v1.27.10 // indirect
 	github.com/rogpeppe/go-internal v1.11.0 // indirect
 	github.com/stretchr/testify v1.8.4 // indirect
-	golang.org/x/crypto v0.14.0 // indirect
+	golang.org/x/crypto v0.17.0 // indirect
 	golang.org/x/net v0.17.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
