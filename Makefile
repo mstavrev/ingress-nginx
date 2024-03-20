@@ -29,6 +29,11 @@ SHELL=/bin/bash -o pipefail -o errexit
 # Use the 0.0 tag for testing, it shouldn't clobber any release builds
 TAG ?= $(shell cat TAG)
 
+# The env below is called GO_VERSION and not GOLANG_VERSION because 
+# the gcb image we use to build already defines GOLANG_VERSION and is a 
+# really old version
+GO_VERSION ?= $(shell cat GOLANG_VERSION)
+
 # e2e settings
 # Allow limiting the scope of the e2e tests. By default run everything
 FOCUS ?=
@@ -103,7 +108,7 @@ clean-chroot-image: ## Removes local image
 
 .PHONY: build
 build:  ## Build ingress controller, debug tool and pre-stop hook.
-	build/run-in-docker.sh \
+	E2E_IMAGE=golang:$(GO_VERSION)-alpine3.19 USE_SHELL=/bin/sh build/run-in-docker.sh \
 		MAC_OS=$(MAC_OS) \
 		PKG=$(PKG) \
 		ARCH=$(ARCH) \
@@ -206,8 +211,9 @@ live-docs: ## Build and launch a local copy of the documentation website in http
 	@docker run ${PLATFORM_FLAG} ${PLATFORM} --rm -it \
 		-p 8000:8000 \
 		-v ${PWD}:/docs \
-		--entrypoint mkdocs \
-		ingress-nginx-docs serve --dev-addr=0.0.0.0:8000
+		--entrypoint /bin/bash   \
+		ingress-nginx-docs \
+		-c "pip install -r /docs/docs/requirements.txt && mkdocs serve --dev-addr=0.0.0.0:8000"
 
 .PHONY: misspell
 misspell:  ## Check for spelling errors.
