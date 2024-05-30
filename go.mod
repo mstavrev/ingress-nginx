@@ -31,12 +31,12 @@ require (
 	google.golang.org/grpc/examples v0.0.0-20240223204917-5ccf176a08ab
 	gopkg.in/go-playground/pool.v3 v3.1.1
 	gopkg.in/mcuadros/go-syslog.v2 v2.3.0
-	k8s.io/api v0.30.0
+	k8s.io/api v0.30.1
 	k8s.io/apiextensions-apiserver v0.29.3
-	k8s.io/apimachinery v0.30.0
+	k8s.io/apimachinery v0.30.1
 	k8s.io/apiserver v0.29.3
-	k8s.io/cli-runtime v0.29.3
-	k8s.io/client-go v0.30.0
+	k8s.io/cli-runtime v0.30.1
+	k8s.io/client-go v0.30.1
 	k8s.io/code-generator v0.29.3
 	k8s.io/component-base v0.30.0
 	k8s.io/klog/v2 v2.120.1
