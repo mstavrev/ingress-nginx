@@ -30,7 +30,7 @@ The following table shows a configuration option's name, type, and the default v
 |[add-headers](#add-headers)|string|""||
 |[allow-backend-server-header](#allow-backend-server-header)|bool|"false"||
 |[allow-cross-namespace-resources](#allow-cross-namespace-resources)|bool|"true"||
-|[allow-snippet-annotations](#allow-snippet-annotations)|bool|false||
+|[allow-snippet-annotations](#allow-snippet-annotations)|bool|"false"||
 |[annotations-risk-level](#annotations-risk-level)|string|Critical||
 |[annotation-value-word-blocklist](#annotation-value-word-blocklist)|string array|""||
 |[hide-headers](#hide-headers)|string array|empty||
@@ -47,12 +47,12 @@ The following table shows a configuration option's name, type, and the default v
 |[client-header-timeout](#client-header-timeout)|int|60||
 |[client-body-buffer-size](#client-body-buffer-size)|string|"8k"||
 |[client-body-timeout](#client-body-timeout)|int|60||
-|[disable-access-log](#disable-access-log)|bool|false||
-|[disable-ipv6](#disable-ipv6)|bool|false||
-|[disable-ipv6-dns](#disable-ipv6-dns)|bool|false||
-|[enable-underscores-in-headers](#enable-underscores-in-headers)|bool|false||
-|[enable-ocsp](#enable-ocsp)|bool|false||
-|[ignore-invalid-headers](#ignore-invalid-headers)|bool|true||
+|[disable-access-log](#disable-access-log)|bool|"false"||
+|[disable-ipv6](#disable-ipv6)|bool|"false"||
+|[disable-ipv6-dns](#disable-ipv6-dns)|bool|"false"||
+|[enable-underscores-in-headers](#enable-underscores-in-headers)|bool|"false"||
+|[enable-ocsp](#enable-ocsp)|bool|"false"||
+|[ignore-invalid-headers](#ignore-invalid-headers)|bool|"true"||
 |[retry-non-idempotent](#retry-non-idempotent)|bool|"false"||
 |[error-log-level](#error-log-level)|string|"notice"||
 |[http2-max-field-size](#http2-max-field-size)|string|""|DEPRECATED in favour of [large_client_header_buffers](#large-client-header-buffers)|
@@ -133,13 +133,6 @@ The following table shows a configuration option's name, type, and the default v
 |[compute-full-forwarded-for](#compute-full-forwarded-for)|bool|"false"||
 |[proxy-add-original-uri-header](#proxy-add-original-uri-header)|bool|"false"||
 |[generate-request-id](#generate-request-id)|bool|"true"||
-|[enable-opentracing](#enable-opentracing)|bool|"false"||
-|[opentracing-operation-name](#opentracing-operation-name)|string|""||
-|[opentracing-location-operation-name](#opentracing-location-operation-name)|string|""||
-|[zipkin-collector-host](#zipkin-collector-host)|string|""||
-|[zipkin-collector-port](#zipkin-collector-port)|int|9411||
-|[zipkin-service-name](#zipkin-service-name)|string|"nginx"||
-|[zipkin-sample-rate](#zipkin-sample-rate)|float|1.0||
 |[jaeger-collector-host](#jaeger-collector-host)|string|""||
 |[jaeger-collector-port](#jaeger-collector-port)|int|6831||
 |[jaeger-endpoint](#jaeger-endpoint)|string|""||
@@ -204,7 +197,7 @@ The following table shows a configuration option's name, type, and the default v
 |[proxy-buffering](#proxy-buffering)|string|"off"||
 |[limit-req-status-code](#limit-req-status-code)|int|503||
 |[limit-conn-status-code](#limit-conn-status-code)|int|503||
-|[enable-syslog](#enable-syslog)|bool|false||
+|[enable-syslog](#enable-syslog)|bool|"false"||
 |[syslog-host](#syslog-host)|string|""||
 |[syslog-port](#syslog-port)|int|514||
 |[no-tls-redirect-locations](#no-tls-redirect-locations)|string|"/.well-known/acme-challenge"||
@@ -934,41 +927,6 @@ Adds an X-Original-Uri header with the original request URI to the backend reque
 ## generate-request-id
 
 Ensures that X-Request-ID is defaulted to a random value, if no X-Request-ID is present in the request
-
-## enable-opentracing
-
-Enables the nginx Opentracing extension. _**default:**_ is disabled
-
-_References:_
-[https://github.com/opentracing-contrib/nginx-opentracing](https://github.com/opentracing-contrib/nginx-opentracing)
-
-## opentracing-operation-name
-
-Specifies a custom name for the server span. _**default:**_ is empty
-
-For example, set to "HTTP $request_method $uri".
-
-## opentracing-location-operation-name
-
-Specifies a custom name for the location span. _**default:**_ is empty
-
-For example, set to "HTTP $request_method $uri".
-
-## zipkin-collector-host
-
-Specifies the host to use when uploading traces. It must be a valid URL.
-
-## zipkin-collector-port
-
-Specifies the port to use when uploading traces. _**default:**_ 9411
-
-## zipkin-service-name
-
-Specifies the service name to use for any traces created. _**default:**_ nginx
-
-## zipkin-sample-rate
-
-Specifies sample rate for any traces created. _**default:**_ 1.0
 
 ## jaeger-collector-host
 

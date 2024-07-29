@@ -123,8 +123,6 @@ You can add these Kubernetes annotations to specific Ingress objects to customiz
 |[nginx.ingress.kubernetes.io/ssl-prefer-server-ciphers](#ssl-ciphers)|"true" or "false"|
 |[nginx.ingress.kubernetes.io/connection-proxy-header](#connection-proxy-header)|string|
 |[nginx.ingress.kubernetes.io/enable-access-log](#enable-access-log)|"true" or "false"|
-|[nginx.ingress.kubernetes.io/enable-opentracing](#enable-opentracing)|"true" or "false"|
-|[nginx.ingress.kubernetes.io/opentracing-trust-incoming-span](#opentracing-trust-incoming-span)|"true" or "false"|
 |[nginx.ingress.kubernetes.io/enable-opentelemetry](#enable-opentelemetry)|"true" or "false"|
 |[nginx.ingress.kubernetes.io/opentelemetry-trust-incoming-span](#opentelemetry-trust-incoming-spans)|"true" or "false"|
 |[nginx.ingress.kubernetes.io/use-regex](#use-regex)|bool|
@@ -813,24 +811,6 @@ Note that rewrite logs are sent to the error_log file at the notice level. To en
 nginx.ingress.kubernetes.io/enable-rewrite-log: "true"
 ```
 
-### Enable Opentracing
-
-Opentracing can be enabled or disabled globally through the ConfigMap but this will sometimes need to be overridden
-to enable it or disable it for a specific ingress (e.g. to turn off tracing of external health check endpoints)
-
-```yaml
-nginx.ingress.kubernetes.io/enable-opentracing: "true"
-```
-
-### Opentracing Trust Incoming Span
-
-The option to trust incoming trace spans can be enabled or disabled globally through the ConfigMap but this will
-sometimes need to be overridden to enable it or disable it for a specific ingress (e.g. only enable on a private endpoint)
-
-```yaml
-nginx.ingress.kubernetes.io/opentracing-trust-incoming-span: "true"
-```
-
 ### Enable Opentelemetry
 
 Opentelemetry can be enabled or disabled globally through the ConfigMap but this will sometimes need to be overridden
@@ -955,7 +935,7 @@ Enables a request to be mirrored to a mirror backend. Responses by mirror backen
 The mirror backend can be set by applying:
 
 ```yaml
-nginx.ingress.kubernetes.io/mirror-target: https://test.env.com/$request_uri
+nginx.ingress.kubernetes.io/mirror-target: https://test.env.com$request_uri
 ```
 
 By default the request-body is sent to the mirror backend, but can be turned off by applying:
@@ -967,7 +947,7 @@ nginx.ingress.kubernetes.io/mirror-request-body: "off"
 Also by default header Host for mirrored requests will be set the same as a host part of uri in the "mirror-target" annotation. You can override it by "mirror-host" annotation:
 
 ```yaml
-nginx.ingress.kubernetes.io/mirror-target: https://1.2.3.4/$request_uri
+nginx.ingress.kubernetes.io/mirror-target: https://1.2.3.4$request_uri
 nginx.ingress.kubernetes.io/mirror-host: "test.env.com"
 ```
 
