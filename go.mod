@@ -5,7 +5,7 @@ go 1.22.0
 toolchain go1.22.4
 
 require (
-	dario.cat/mergo v1.0.0
+	dario.cat/mergo v1.0.1
 	github.com/armon/go-proxyproto v0.1.0
 	github.com/eapache/channels v1.1.0
 	github.com/fsnotify/fsnotify v1.7.0
@@ -15,7 +15,7 @@ require (
 	github.com/mitchellh/hashstructure/v2 v2.0.2
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/moul/pb v0.0.0-20220425114252-bca18df4138c
-	github.com/ncabatoff/process-exporter v0.8.2
+	github.com/ncabatoff/process-exporter v0.8.3
 	github.com/onsi/ginkgo/v2 v2.19.0
 	github.com/opencontainers/runc v1.1.13
 	github.com/pmezard/go-difflib v1.0.0
@@ -28,7 +28,6 @@ require (
 	github.com/yudai/gojsondiff v1.0.0
 	github.com/zakjan/cert-chain-resolver v0.0.0-20221221105603-fcedb00c5b30
 	golang.org/x/crypto v0.25.0
-	golang.org/x/exp v0.0.0-20240416160154-fe59bbe5cc7f
 	google.golang.org/grpc v1.65.0
 	google.golang.org/grpc/examples v0.0.0-20240223204917-5ccf176a08ab
 	gopkg.in/go-playground/pool.v3 v3.1.1
@@ -107,6 +106,7 @@ require (
 	github.com/yudai/pp v2.0.1+incompatible // indirect
 	go.starlark.net v0.0.0-20240123142251-f86470692795 // indirect
 	go.uber.org/zap v1.27.0 // indirect
+	golang.org/x/exp v0.0.0-20240416160154-fe59bbe5cc7f // indirect
 	golang.org/x/mod v0.17.0 // indirect
 	golang.org/x/net v0.26.0 // indirect
 	golang.org/x/oauth2 v0.21.0 // indirect
