@@ -27,7 +27,7 @@ endif
 SHELL=/bin/bash -o pipefail -o errexit
 
 # Use the 0.0 tag for testing, it shouldn't clobber any release builds
-TAG ?= v1.10.3
+TAG ?= $(shell cat TAG)
 
 # The env below is called GO_VERSION and not GOLANG_VERSION because 
 # the gcb image we use to build already defines GOLANG_VERSION and is a 
