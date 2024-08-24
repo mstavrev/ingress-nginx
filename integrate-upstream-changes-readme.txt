@@ -16,7 +16,7 @@ git merge controller-v0.34.1
 
 5. Edit:
     - Makefile: set the TAG to the value for this nginx-ingress release
-    - NGINX_BASE: update to point to the nginx base image (should be the combinateion of docker.io/mstavrev/nginx-1.25 and the tag in images/nginx-1.25/TAG)
+    - NGINX_BASE: update to point to the nginx base image (should be the combination of docker.io/mstavrev/nginx-1.25 and the tag in images/nginx-1.25/TAG)
 
 6. Commit and rebase on the remote/upstream/tag that had been merged
 

@@ -2,7 +2,7 @@
 
 [ingress-nginx](https://github.com/kubernetes/ingress-nginx) Ingress controller for Kubernetes using NGINX as a reverse proxy and load balancer
 
-![Version: 4.10.3](https://img.shields.io/badge/Version-4.10.3-informational?style=flat-square) ![AppVersion: 1.10.3](https://img.shields.io/badge/AppVersion-1.10.3-informational?style=flat-square)
+![Version: 4.10.4](https://img.shields.io/badge/Version-4.10.4-informational?style=flat-square) ![AppVersion: 1.10.4](https://img.shields.io/badge/AppVersion-1.10.4-informational?style=flat-square)
 
 To use, add `ingressClassName: nginx` spec field or the `kubernetes.io/ingress.class: nginx` annotation to your Ingress resources.
 
@@ -253,11 +253,11 @@ As of version `1.26.0` of this chart, by simply not providing any clusterIP valu
 | controller.admissionWebhooks.namespaceSelector | object | `{}` |  |
 | controller.admissionWebhooks.objectSelector | object | `{}` |  |
 | controller.admissionWebhooks.patch.enabled | bool | `true` |  |
-| controller.admissionWebhooks.patch.image.digest | string | `"sha256:36d05b4077fb8e3d13663702fa337f124675ba8667cbd949c03a8e8ea6fa4366"` |  |
+| controller.admissionWebhooks.patch.image.digest | string | `"sha256:a320a50cc91bd15fd2d6fa6de58bd98c1bd64b9a6f926ce23a600d87043455a3"` |  |
 | controller.admissionWebhooks.patch.image.image | string | `"ingress-nginx/kube-webhook-certgen"` |  |
 | controller.admissionWebhooks.patch.image.pullPolicy | string | `"IfNotPresent"` |  |
 | controller.admissionWebhooks.patch.image.registry | string | `"registry.k8s.io"` |  |
-| controller.admissionWebhooks.patch.image.tag | string | `"v1.4.1"` |  |
+| controller.admissionWebhooks.patch.image.tag | string | `"v1.4.3"` |  |
 | controller.admissionWebhooks.patch.labels | object | `{}` | Labels to be added to patch job resources |
 | controller.admissionWebhooks.patch.networkPolicy.enabled | bool | `false` | Enable 'networkPolicy' or not |
 | controller.admissionWebhooks.patch.nodeSelector."kubernetes.io/os" | string | `"linux"` |  |
@@ -317,8 +317,8 @@ As of version `1.26.0` of this chart, by simply not providing any clusterIP valu
 | controller.hostname | object | `{}` | Optionally customize the pod hostname. |
 | controller.image.allowPrivilegeEscalation | bool | `false` |  |
 | controller.image.chroot | bool | `false` |  |
-| controller.image.digest | string | `"sha256:b5a5082f8e508cc1aac1c0ef101dc2f87b63d51598a5747d81d6cf6e7ba058fd"` |  |
-| controller.image.digestChroot | string | `"sha256:9033e04bd3cd01f92414f8d5999c5095734d4caceb4923942298152a38373d4b"` |  |
+| controller.image.digest | string | `"sha256:505b9048c02dde3d6c8667bf0b52aba7b36adf7b03da34c47d5fa312d2d4c6fc"` |  |
+| controller.image.digestChroot | string | `"sha256:bf71acf6e71830a4470e2183e3bc93c4f006b954f8a05fb434242ef0f8a24858"` |  |
 | controller.image.image | string | `"ingress-nginx/controller"` |  |
 | controller.image.pullPolicy | string | `"IfNotPresent"` |  |
 | controller.image.readOnlyRootFilesystem | bool | `false` |  |
@@ -326,7 +326,7 @@ As of version `1.26.0` of this chart, by simply not providing any clusterIP valu
 | controller.image.runAsNonRoot | bool | `true` |  |
 | controller.image.runAsUser | int | `101` |  |
 | controller.image.seccompProfile.type | string | `"RuntimeDefault"` |  |
-| controller.image.tag | string | `"v1.10.3"` |  |
+| controller.image.tag | string | `"v1.10.4"` |  |
 | controller.ingressClass | string | `"nginx"` | For backwards compatibility with ingress.class annotation, use ingressClass. Algorithm is as follows, first ingressClassName is considered, if not present, controller looks for ingress.class annotation |
 | controller.ingressClassByName | bool | `false` | Process IngressClass per name (additionally as per spec.controller). |
 | controller.ingressClassResource | object | `{"controllerValue":"k8s.io/ingress-nginx","default":false,"enabled":true,"name":"nginx","parameters":{}}` | This section refers to the creation of the IngressClass resource. IngressClasses are immutable and cannot be changed after creation. We do not support namespaced IngressClasses, yet, so a ClusterRole and a ClusterRoleBinding is required. |
@@ -390,11 +390,11 @@ As of version `1.26.0` of this chart, by simply not providing any clusterIP valu
 | controller.opentelemetry.containerSecurityContext.runAsUser | int | `65532` | The image's default user, inherited from its base image `cgr.dev/chainguard/static`. |
 | controller.opentelemetry.containerSecurityContext.seccompProfile.type | string | `"RuntimeDefault"` |  |
 | controller.opentelemetry.enabled | bool | `false` |  |
-| controller.opentelemetry.image.digest | string | `"sha256:13bee3f5223883d3ca62fee7309ad02d22ec00ff0d7033e3e9aca7a9f60fd472"` |  |
+| controller.opentelemetry.image.digest | string | `"sha256:f7604ac0547ed64d79b98d92133234e66c2c8aade3c1f4809fed5eec1fb7f922"` |  |
 | controller.opentelemetry.image.distroless | bool | `true` |  |
-| controller.opentelemetry.image.image | string | `"ingress-nginx/opentelemetry"` |  |
+| controller.opentelemetry.image.image | string | `"ingress-nginx/opentelemetry-1.25.3"` |  |
 | controller.opentelemetry.image.registry | string | `"registry.k8s.io"` |  |
-| controller.opentelemetry.image.tag | string | `"v20230721-3e2062ee5"` |  |
+| controller.opentelemetry.image.tag | string | `"v20240813-b933310d"` |  |
 | controller.opentelemetry.name | string | `"opentelemetry"` |  |
 | controller.opentelemetry.resources | object | `{}` |  |
 | controller.podAnnotations | object | `{}` | Annotations to be added to controller pods # |
