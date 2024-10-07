@@ -1,0 +1,31 @@
+ src/http/ngx_http_parse.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/src/http/ngx_http_parse.c b/src/http/ngx_http_parse.c
+index cfc42f9d..3af2259a 100644
+--- a/src/http/ngx_http_parse.c
++++ b/src/http/ngx_http_parse.c
+@@ -1000,6 +1000,7 @@ ngx_http_parse_header_line(ngx_http_request_t *r, ngx_buf_t *b,
+         case sw_space_before_value:
+             switch (ch) {
+             case ' ':
++            case '\x9':
+                 break;
+             case CR:
+                 r->header_start = p;
+@@ -1023,6 +1024,7 @@ ngx_http_parse_header_line(ngx_http_request_t *r, ngx_buf_t *b,
+         case sw_value:
+             switch (ch) {
+             case ' ':
++            case '\x9':
+                 r->header_end = p;
+                 state = sw_space_after_value;
+                 break;
+@@ -1042,6 +1044,7 @@ ngx_http_parse_header_line(ngx_http_request_t *r, ngx_buf_t *b,
+         case sw_space_after_value:
+             switch (ch) {
+             case ' ':
++            case '\x9':
+                 break;
+             case CR:
+                 state = sw_almost_done;
