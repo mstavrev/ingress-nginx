@@ -24,7 +24,7 @@ INIT_BUILDX=$(DIR)/../../hack/init-buildx.sh
 SHORT_SHA ?=$(shell git rev-parse --short HEAD)
 TAG ?=$(shell cat TAG)
 
-REGISTRY ?= gcr.io/k8s-staging-ingress-nginx
+REGISTRY ?= docker.io/mstavrev
 
 IMAGE = $(REGISTRY)/nginx
 
@@ -32,7 +32,7 @@ IMAGE = $(REGISTRY)/nginx
 export DOCKER_CLI_EXPERIMENTAL=enabled
 
 # build with buildx
-PLATFORMS?=linux/amd64,linux/arm,linux/arm64
+PLATFORMS?=linux/amd64
 OUTPUT=
 PROGRESS=plain
 build: ensure-buildx

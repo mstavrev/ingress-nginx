@@ -58,7 +58,7 @@ ifneq ($(PLATFORM),)
 	PLATFORM_FLAG="--platform"
 endif
 
-REGISTRY ?= gcr.io/k8s-staging-ingress-nginx
+REGISTRY ?= docker.io/mstavrev
 
 BASE_IMAGE ?= $(shell cat NGINX_BASE)
 
@@ -240,8 +240,8 @@ ensure-buildx:
 show-version:
 	echo -n $(TAG)
 
-PLATFORMS ?= amd64 arm arm64
-BUILDX_PLATFORMS ?= linux/amd64,linux/arm,linux/arm64
+PLATFORMS ?= amd64
+BUILDX_PLATFORMS ?= linux/amd64
 
 .PHONY: release # Build a multi-arch docker image
 release: ensure-buildx clean
