@@ -41,7 +41,7 @@ function cleanup {
 }
 trap cleanup EXIT
 
-E2E_IMAGE=${E2E_IMAGE:-registry.k8s.io/ingress-nginx/e2e-test-runner:v1.3.1@sha256:e5342d52e2eb6459483b9538b3456d67b3b15e4c55eb9f67993b55ed2ed61901}
+E2E_IMAGE=${E2E_IMAGE:-registry.k8s.io/ingress-nginx/e2e-test-runner:v1.3.3@sha256:d988fea544ba4179f29f380fb6bdd676bad02ad1b001066d732b7b8ee0ab1de2}
 
 if [[ "$RUNTIME" == podman ]]; then
   # Podman does not support both tag and digest
@@ -79,7 +79,7 @@ if [[ "$DOCKER_IN_DOCKER_ENABLED" == "true" ]]; then
   echo "..reached DIND check TRUE block, inside run-in-docker.sh"
   echo "FLAGS=$FLAGS"
   #go env
-  go install -mod=mod github.com/onsi/ginkgo/v2/ginkgo@v2.23.3
+  go install -mod=mod github.com/onsi/ginkgo/v2/ginkgo@v2.23.4
   find / -type f -name ginkgo 2>/dev/null
   which ginkgo
   /bin/bash -c "${FLAGS}"

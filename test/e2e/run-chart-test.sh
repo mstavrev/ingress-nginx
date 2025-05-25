@@ -78,7 +78,7 @@ fi
 
 if [ "${SKIP_IMAGE_CREATION:-false}" = "false" ]; then
   if ! command -v ginkgo &> /dev/null; then
-    go install github.com/onsi/ginkgo/v2/ginkgo@v2.23.3
+    go install github.com/onsi/ginkgo/v2/ginkgo@v2.23.4
   fi
   echo "[dev-env] building image"
   make -C ${DIR}/../../ clean-image build image
@@ -114,5 +114,5 @@ docker run \
   --workdir /workdir \
   --entrypoint ct \
   --rm \
-  registry.k8s.io/ingress-nginx/e2e-test-runner:v1.3.1@sha256:e5342d52e2eb6459483b9538b3456d67b3b15e4c55eb9f67993b55ed2ed61901 \
+  registry.k8s.io/ingress-nginx/e2e-test-runner:v1.3.3@sha256:d988fea544ba4179f29f380fb6bdd676bad02ad1b001066d732b7b8ee0ab1de2 \
     install --charts charts/ingress-nginx
