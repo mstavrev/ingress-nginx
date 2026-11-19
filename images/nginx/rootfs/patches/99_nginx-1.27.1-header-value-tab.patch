@@ -1,0 +1,25 @@
+diff --git a/src/http/ngx_http_parse.c b/src/http/ngx_http_parse.c
+--- a/src/http/ngx_http_parse.c
++++ b/src/http/ngx_http_parse.c
+@@ -973,5 +973,6 @@
+             switch (ch) {
+             case ' ':
++            case '\x9':
+                 break;
+             case CR:
+                 r->header_start = p;
+@@ -997,5 +998,6 @@
+             switch (ch) {
+             case ' ':
++            case '\x9':
+                 r->header_end = p;
+                 state = sw_space_after_value;
+                 break;
+@@ -1017,6 +1019,7 @@
+             switch (ch) {
+             case ' ':
++            case '\x9':
+                 break;
+             case CR:
+                 state = sw_almost_done;
+                 break;
